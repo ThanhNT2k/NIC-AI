@@ -7,6 +7,8 @@ type User = { id: string; email: string; fullName: string; organization: string;
 type Service = { code: string; type: string; title: string; copy: string; action: string };
 type Draft = { id: string; version: number; confirmedVersion: number | null; status: string };
 type ApiPayload = { error?: string; user?: User; draft?: Draft; request?: { id: string } };
+type ServiceField = { name: string; label: string; type?: "text" | "date" | "time" | "number" | "tel"; placeholder?: string; min?: string; options?: string[] };
+type ServiceForm = { eyebrow: string; detailsLabel: string; detailsPlaceholder: string; fields: ServiceField[] };
 
 function Image(props: ComponentProps<typeof NextImage>) {
   return <NextImage {...props} unoptimized />;
@@ -18,6 +20,66 @@ const services: Service[] = [
   { code: "03", type: "event_registration", title: "Đăng ký sự kiện", copy: "Chuẩn bị thông tin cho sự kiện và khách tham dự.", action: "Bắt đầu đăng ký" },
   { code: "04", type: "access_card", title: "Thẻ & quyền ra vào", copy: "Đăng ký thẻ mới, gia hạn hoặc báo mất thẻ.", action: "Quản lý thẻ" },
 ];
+
+const serviceForms: Record<string, ServiceForm> = {
+  space_booking: {
+    eyebrow: "ĐĂNG KÝ KHÔNG GIAN",
+    detailsLabel: "Mục đích sử dụng",
+    detailsPlaceholder: "Mô tả hoạt động, cách bố trí hoặc thiết bị cần chuẩn bị",
+    fields: [
+      { name: "date", label: "Ngày sử dụng", type: "date" },
+      { name: "startTime", label: "Giờ bắt đầu", type: "time" },
+      { name: "endTime", label: "Giờ kết thúc", type: "time" },
+      { name: "attendees", label: "Số người dự kiến", type: "number", min: "1", placeholder: "Ví dụ: 20" },
+      { name: "space", label: "Không gian mong muốn", options: ["Phòng họp", "Phòng hội thảo", "Không gian sự kiện", "Không gian làm việc chung"] },
+    ],
+  },
+  support: {
+    eyebrow: "YÊU CẦU HỖ TRỢ",
+    detailsLabel: "Nội dung cần hỗ trợ",
+    detailsPlaceholder: "Mô tả hiện trạng, ảnh hưởng và kết quả bạn mong muốn",
+    fields: [
+      { name: "category", label: "Nhóm hỗ trợ", options: ["Công nghệ thông tin", "Thiết bị & kỹ thuật", "Vệ sinh & tiện ích", "Hành chính", "Khác"] },
+      { name: "priority", label: "Mức độ ưu tiên", options: ["Thông thường", "Cần xử lý trong ngày", "Khẩn cấp"] },
+      { name: "location", label: "Vị trí cần hỗ trợ", placeholder: "Tòa nhà, tầng, phòng" },
+      { name: "desiredTime", label: "Thời gian mong muốn", type: "date" },
+    ],
+  },
+  event_registration: {
+    eyebrow: "ĐĂNG KÝ SỰ KIỆN",
+    detailsLabel: "Thông tin bổ sung",
+    detailsPlaceholder: "Nhu cầu hỗ trợ, yêu cầu tiếp cận hoặc ghi chú cho ban tổ chức",
+    fields: [
+      { name: "eventName", label: "Tên sự kiện", placeholder: "Sự kiện bạn muốn đăng ký" },
+      { name: "eventDate", label: "Ngày tham dự", type: "date" },
+      { name: "participants", label: "Số người tham dự", type: "number", min: "1", placeholder: "Ví dụ: 2" },
+      { name: "role", label: "Vai trò tham dự", options: ["Khách tham dự", "Diễn giả", "Đối tác", "Đơn vị trưng bày"] },
+    ],
+  },
+  access_card: {
+    eyebrow: "ĐĂNG KÝ THẺ RA VÀO",
+    detailsLabel: "Lý do đăng ký",
+    detailsPlaceholder: "Mô tả nhu cầu cấp mới, gia hạn, thay đổi quyền hoặc báo mất thẻ",
+    fields: [
+      { name: "requestType", label: "Loại yêu cầu", options: ["Cấp thẻ mới", "Gia hạn thẻ", "Thay đổi quyền ra vào", "Báo mất / cấp lại"] },
+      { name: "holderName", label: "Họ tên người sử dụng", placeholder: "Họ và tên trên thẻ" },
+      { name: "phone", label: "Số điện thoại liên hệ", type: "tel", placeholder: "Ví dụ: 0912 345 678" },
+      { name: "effectiveDate", label: "Ngày bắt đầu sử dụng", type: "date" },
+    ],
+  },
+};
+
+function ServiceRegistrationFields({ service }: { service: Service }) {
+  const form = serviceForms[service.type];
+  return <>
+    <div className="service-form-grid">
+      {form.fields.map(field => <label key={field.name}>{field.label}{field.options
+        ? <select name={field.name} required defaultValue=""><option value="" disabled>Chọn một phương án</option>{field.options.map(option => <option key={option}>{option}</option>)}</select>
+        : <input name={field.name} type={field.type ?? "text"} required min={field.min} maxLength={field.type === "text" || field.type === "tel" || !field.type ? 120 : undefined} placeholder={field.placeholder} />}</label>)}
+    </div>
+    <label>{form.detailsLabel}<textarea name="details" required minLength={5} maxLength={1000} placeholder={form.detailsPlaceholder} /></label>
+  </>;
+}
 
 const requests = [
   { id: "REQ-0712", title: "Hỗ trợ thiết bị cho workshop", status: "Đang xử lý", meta: "Cập nhật 12 phút trước", step: 2 },
@@ -54,7 +116,10 @@ export function ConciergeWorkspace() {
   async function createDraft(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); if (!selectedService) return;
     const form = new FormData(event.currentTarget);
-    const response = await fetch("/api/service-drafts", { method: "POST", headers: csrfHeaders({ "Content-Type": "application/json" }), body: JSON.stringify({ serviceType: selectedService.type, title: form.get("title"), details: form.get("details") }) });
+    const registration = serviceForms[selectedService.type];
+    const structuredDetails = registration.fields.map(field => `${field.label}: ${String(form.get(field.name) ?? "").trim()}`);
+    structuredDetails.push(`${registration.detailsLabel}: ${String(form.get("details") ?? "").trim()}`);
+    const response = await fetch("/api/service-drafts", { method: "POST", headers: csrfHeaders({ "Content-Type": "application/json" }), body: JSON.stringify({ serviceType: selectedService.type, title: form.get("title"), details: structuredDetails.join("\n") }) });
     const data = await response.json();
     if (!response.ok) return setDraftMessage(data.error ?? "Không thể lưu bản nháp.");
     setActiveDraft(data.draft); setDraftMessage("Đã lưu bản nháp. Hãy kiểm tra thông tin và xác nhận phiên bản hiện tại.");
@@ -89,7 +154,7 @@ export function ConciergeWorkspace() {
     </section>
     <div className={`copilot-overlay ${copilotOpen ? "open" : ""}`} onClick={() => setCopilotOpen(false)} aria-hidden={!copilotOpen} />
     <aside className={`copilot-drawer ${copilotOpen ? "open" : ""}`} aria-label="NIC AI Copilot" aria-hidden={!copilotOpen}><div className="copilot-heading"><div><span>AI</span><div><strong>NIC Copilot</strong><small>Hỗ trợ theo quyền của bạn</small></div></div><button onClick={() => setCopilotOpen(false)} aria-label="Đóng Copilot">×</button></div><div className="copilot-message"><strong>NIC Copilot</strong><p>Tôi có thể tìm hướng dẫn, kiểm tra thông tin hoặc tạo bản nháp. Tôi không thể tự phê duyệt hay gửi yêu cầu.</p></div><div className="copilot-prompts"><button>Kiểm tra phòng trống</button><button>Tìm quy trình liên quan</button><button>Tạo bản nháp yêu cầu</button></div><form className="copilot-composer" onSubmit={event => event.preventDefault()}><label htmlFor="copilot-input">Bạn cần hỗ trợ gì?</label><div><input id="copilot-input" placeholder="Nhập câu hỏi hoặc yêu cầu" /><button type="submit">Gửi</button></div></form></aside>
-    {selectedService && <div className="service-modal-layer" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setSelectedService(null); }}><section className="service-modal" role="dialog" aria-modal="true" aria-labelledby="service-modal-title"><header><div><span>{activeDraft ? `BẢN NHÁP V${activeDraft.version}` : "BẢN NHÁP DỊCH VỤ"}</span><h2 id="service-modal-title">{selectedService.title}</h2></div><button onClick={() => setSelectedService(null)} aria-label="Đóng biểu mẫu">×</button></header><p>{selectedService.copy} Thông tin chỉ được gửi sau khi bạn xác nhận đúng phiên bản hiện tại.</p>{!activeDraft ? <form onSubmit={createDraft}><label>Tiêu đề<input name="title" required minLength={3} maxLength={120} placeholder="Tóm tắt nhu cầu của bạn" /></label><label>Thông tin chi tiết<textarea name="details" required minLength={5} maxLength={2000} placeholder="Thời gian, địa điểm, số lượng hoặc thông tin cần hỗ trợ" /></label>{draftMessage && <p className="form-message" role="status">{draftMessage}</p>}<div><button type="button" onClick={() => setSelectedService(null)}>Để sau</button><button type="submit">Lưu bản nháp</button></div></form> : <div className="draft-review"><div><span>Trạng thái</span><strong>{activeDraft.status === "submitted" ? "Đã gửi" : activeDraft.confirmedVersion === activeDraft.version ? "Đã xác nhận" : "Chờ xác nhận"}</strong></div>{draftMessage && <p className="form-message" role="status">{draftMessage}</p>}<div className="draft-actions"><button onClick={() => setSelectedService(null)}>Đóng</button>{activeDraft.status !== "submitted" && activeDraft.confirmedVersion !== activeDraft.version && <button onClick={confirmDraft}>Tôi đã kiểm tra, xác nhận</button>}{activeDraft.status !== "submitted" && activeDraft.confirmedVersion === activeDraft.version && <button className="submit-request" onClick={submitDraft}>Gửi yêu cầu chính thức</button>}</div></div>}</section></div>}
+    {selectedService && <div className="service-modal-layer" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setSelectedService(null); }}><section className="service-modal" role="dialog" aria-modal="true" aria-labelledby="service-modal-title"><header><div><span>{activeDraft ? `BẢN NHÁP V${activeDraft.version}` : serviceForms[selectedService.type].eyebrow}</span><h2 id="service-modal-title">{selectedService.title}</h2></div><button onClick={() => setSelectedService(null)} aria-label="Đóng biểu mẫu">×</button></header><p>{selectedService.copy} Thông tin chỉ được gửi sau khi bạn xác nhận đúng phiên bản hiện tại.</p>{!activeDraft ? <form onSubmit={createDraft}><label>Tiêu đề<input name="title" required minLength={3} maxLength={120} placeholder="Tóm tắt nhu cầu của bạn" /></label><ServiceRegistrationFields service={selectedService} />{draftMessage && <p className="form-message" role="status">{draftMessage}</p>}<div><button type="button" onClick={() => setSelectedService(null)}>Để sau</button><button type="submit">Tiếp tục xác nhận</button></div></form> : <div className="draft-review"><div><span>Trạng thái</span><strong>{activeDraft.status === "submitted" ? "Đã gửi" : activeDraft.confirmedVersion === activeDraft.version ? "Đã xác nhận" : "Chờ xác nhận"}</strong></div>{draftMessage && <p className="form-message" role="status">{draftMessage}</p>}<div className="draft-actions"><button onClick={() => setSelectedService(null)}>Đóng</button>{activeDraft.status !== "submitted" && activeDraft.confirmedVersion !== activeDraft.version && <button onClick={confirmDraft}>Tôi đã kiểm tra, xác nhận</button>}{activeDraft.status !== "submitted" && activeDraft.confirmedVersion === activeDraft.version && <button className="submit-request" onClick={submitDraft}>Gửi yêu cầu chính thức</button>}</div></div>}</section></div>}
   </main>;
 }
 

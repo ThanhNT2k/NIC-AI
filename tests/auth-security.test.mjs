@@ -59,3 +59,11 @@ test("write routes require CSRF and distributed rate limits", async () => {
   assert.match(revoke, /DELETE FROM sessions WHERE user_id = \?/);
   assert.match(revoke, /session\.revoked_all/);
 });
+
+test("common services expose dedicated registration fields", async () => {
+  const workspace = await readFile(new URL("../app/components/ConciergeWorkspace.tsx", import.meta.url), "utf8");
+  for (const serviceType of ["space_booking", "support", "event_registration", "access_card"]) assert.match(workspace, new RegExp(`${serviceType}:`));
+  for (const field of ["Ngày sử dụng", "Nhóm hỗ trợ", "Ngày tham dự", "Loại yêu cầu"]) assert.match(workspace, new RegExp(field));
+  assert.match(workspace, /ServiceRegistrationFields service=\{selectedService\}/);
+  assert.match(workspace, /structuredDetails\.join\("\\n"\)/);
+});

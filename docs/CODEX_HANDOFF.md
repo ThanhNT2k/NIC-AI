@@ -70,6 +70,16 @@ Máy mới cần tạo `.env.local` từ `.env.example`; không sao chép secret
 
 ## Nhật ký bàn giao
 
+### 2026-07-20 - Form đăng ký chuyên biệt cho dịch vụ thường dùng
+
+- Bốn dịch vụ thường dùng đều mở form đăng ký riêng thay vì chỉ dùng một ô mô tả chung.
+- Đặt không gian thu thập ngày, giờ bắt đầu/kết thúc, số người và loại không gian; hỗ trợ thu thập nhóm, mức ưu tiên, vị trí và thời gian mong muốn.
+- Đăng ký sự kiện thu thập tên/ngày sự kiện, số người và vai trò; thẻ ra vào thu thập loại yêu cầu, người sử dụng, liên hệ và ngày hiệu lực.
+- Dữ liệu có cấu trúc được tổng hợp vào chi tiết bản nháp và giữ nguyên guardrail xác nhận đúng version trước khi submit.
+- Form có bố cục hai cột trên desktop, một cột và thanh hành động cố định trên mobile; có validation bắt buộc và giới hạn độ dài.
+- Đã chạy `npm run lint` và `npm test`: 13 test đạt, build thành công.
+- Việc tiếp theo: tách schema nghiệp vụ cho booking để kiểm tra availability và chống trùng thời gian ở database thay vì chỉ lưu trong chi tiết bản nháp.
+
 ### 2026-07-20 - Ổn định môi trường local cho font, ảnh và đăng nhập
 
 - Thay `next/font` bằng Be Vietnam Pro tự phục vụ từ `public/fonts`, không còn sinh URL `file:///D:/...` trong HTML/CSS.
