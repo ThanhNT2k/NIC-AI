@@ -1,8 +1,9 @@
-import { currentUser, database } from "@/lib/d1-auth";
+import { database, enforceRateLimit, requireCsrf } from "@/lib/d1-auth";
 
 type ExistingRequest = { id: string; status: string };
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
-  const user = await currentUser(request); if (!user) return Response.json({ error: "AUTH_REQUIRED" }, { status: 401 });
+  const user = await requireCsrf(request); if (!user) return Response.json({ error: "CSRF_INVALID" }, { status: 403 });
+  if (!await enforceRateLimit(request, "request.submit", user.id, 20, 3600)) return Response.json({ error: "RATE_LIMITED" }, { status: 429 });
   const idempotencyKey = request.headers.get("idempotency-key")?.trim();
   if (!idempotencyKey || idempotencyKey.length < 16 || idempotencyKey.length > 100) return Response.json({ error: "IDEMPOTENCY_KEY_REQUIRED" }, { status: 400 });
   const { id: draftId } = await context.params; const db = await database();

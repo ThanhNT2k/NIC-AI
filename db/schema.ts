@@ -18,8 +18,16 @@ export const sessions = sqliteTable("sessions", {
   id: text("id").primaryKey(),
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   tokenHash: text("token_hash").notNull().unique(),
+  csrfHash: text("csrf_hash").notNull(),
   expiresAt: integer("expires_at").notNull(),
   createdAt: integer("created_at").notNull(),
+});
+
+export const rateLimits = sqliteTable("rate_limits", {
+  bucketKey: text("bucket_key").primaryKey(),
+  windowStart: integer("window_start").notNull(),
+  count: integer("count").notNull().default(1),
+  expiresAt: integer("expires_at").notNull(),
 });
 
 export const serviceDrafts = sqliteTable("service_drafts", {

@@ -1,4 +1,5 @@
 const SESSION_COOKIE = "nic_session";
+const CSRF_COOKIE = "nic_csrf";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
 const PASSWORD_ITERATIONS = 210_000;
 
@@ -51,18 +52,41 @@ export async function verifyPassword(password: string, expectedHash: string, sal
 
 export async function createSession(userId: string) {
   const token = bytesToBase64(crypto.getRandomValues(new Uint8Array(32)));
+  const csrfToken = bytesToBase64(crypto.getRandomValues(new Uint8Array(24)));
   const now = Math.floor(Date.now() / 1000);
   const db = await database();
-  await db.prepare("INSERT INTO sessions (id, user_id, token_hash, expires_at, created_at) VALUES (?, ?, ?, ?, ?)").bind(crypto.randomUUID(), userId, await sha256(token), now + SESSION_TTL_SECONDS, now).run();
-  return { token, maxAge: SESSION_TTL_SECONDS };
+  await db.prepare("INSERT INTO sessions (id, user_id, token_hash, csrf_hash, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?)").bind(crypto.randomUUID(), userId, await sha256(token), await sha256(csrfToken), now + SESSION_TTL_SECONDS, now).run();
+  return { token, csrfToken, maxAge: SESSION_TTL_SECONDS };
 }
 
 export function sessionCookie(token: string, maxAge: number) {
   return `${SESSION_COOKIE}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${process.env.NODE_ENV === "production" ? "; Secure" : ""}`;
 }
 
+export function csrfCookie(token: string, maxAge: number) {
+  return `${CSRF_COOKIE}=${encodeURIComponent(token)}; Path=/; SameSite=Strict; Max-Age=${maxAge}${process.env.NODE_ENV === "production" ? "; Secure" : ""}`;
+}
+
+export function sessionHeaders(session: { token: string; csrfToken: string; maxAge: number }) {
+  const headers = new Headers({ "Content-Type": "application/json" });
+  headers.append("Set-Cookie", sessionCookie(session.token, session.maxAge));
+  headers.append("Set-Cookie", csrfCookie(session.csrfToken, session.maxAge));
+  return headers;
+}
+
+export function clearedSessionHeaders() {
+  const headers = new Headers({ "Content-Type": "application/json" });
+  headers.append("Set-Cookie", clearSessionCookie());
+  headers.append("Set-Cookie", clearCsrfCookie());
+  return headers;
+}
+
 export function clearSessionCookie() {
   return `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${process.env.NODE_ENV === "production" ? "; Secure" : ""}`;
+}
+
+export function clearCsrfCookie() {
+  return `${CSRF_COOKIE}=; Path=/; SameSite=Strict; Max-Age=0${process.env.NODE_ENV === "production" ? "; Secure" : ""}`;
 }
 
 function cookieValue(request: Request, name: string) {
@@ -86,4 +110,26 @@ export async function currentUser(request: Request): Promise<SessionUser | null>
 export async function deleteCurrentSession(request: Request) {
   const token = cookieValue(request, SESSION_COOKIE);
   if (token) { const db = await database(); await db.prepare("DELETE FROM sessions WHERE token_hash = ?").bind(await sha256(token)).run(); }
+}
+
+export function validRequestOrigin(request: Request) {
+  const origin = request.headers.get("origin");
+  return origin !== null && origin === new URL(request.url).origin;
+}
+
+export async function requireCsrf(request: Request) {
+  if (!validRequestOrigin(request)) return null;
+  const sessionToken = cookieValue(request, SESSION_COOKIE);
+  const csrfToken = cookieValue(request, CSRF_COOKIE);
+  const headerToken = request.headers.get("x-csrf-token");
+  if (!sessionToken || !csrfToken || !headerToken || csrfToken !== headerToken) return null;
+  const now = Math.floor(Date.now() / 1000); const db = await database();
+  return await db.prepare("SELECT u.id, u.email, u.full_name AS fullName, u.organization, u.role FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ? AND s.csrf_hash = ? AND s.expires_at > ?").bind(await sha256(sessionToken), await sha256(csrfToken), now).first<SessionUser>();
+}
+
+export async function enforceRateLimit(request: Request, scope: string, identity: string, limit: number, windowSeconds: number) {
+  const ip = request.headers.get("cf-connecting-ip") ?? request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const bucketKey = await sha256(`${scope}:${ip}:${identity.toLowerCase()}`); const now = Math.floor(Date.now() / 1000); const db = await database();
+  const row = await db.prepare("INSERT INTO rate_limits (bucket_key, window_start, count, expires_at) VALUES (?, ?, 1, ?) ON CONFLICT(bucket_key) DO UPDATE SET count = CASE WHEN window_start <= ? THEN 1 ELSE count + 1 END, window_start = CASE WHEN window_start <= ? THEN ? ELSE window_start END, expires_at = ? RETURNING count").bind(bucketKey, now, now + windowSeconds * 2, now - windowSeconds, now - windowSeconds, now, now + windowSeconds * 2).first<{ count: number }>();
+  return (row?.count ?? limit + 1) <= limit;
 }

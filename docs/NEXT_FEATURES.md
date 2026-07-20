@@ -5,8 +5,8 @@
 1. Luồng draft, confirm và submit bằng transaction, version check và idempotency key.
 2. RBAC/ABAC theo organization, department và quan hệ với bản ghi; kiểm thử cách ly ít nhất hai tenant.
 3. Chuyển authentication production sang Supabase Auth hoặc nhà cung cấp danh tính được phê duyệt; MFA cho tài khoản nội bộ đặc quyền.
-4. Audit append-only cho đăng nhập, thay đổi draft, confirm, submit và thay đổi quyền.
-5. Rate limit phân tán, CSRF protection cho write action và cơ chế thu hồi toàn bộ session.
+4. Audit append-only cho đăng nhập, thay đổi draft, confirm, submit và thay đổi quyền. Hiện đã có audit cho update/confirm/submit và revoke session; còn bổ sung sự kiện đăng nhập và thay đổi quyền.
+5. Rate limit phân tán, CSRF protection cho write action và cơ chế thu hồi toàn bộ session. Đã hoàn thành trên D1 ngày 2026-07-20.
 
 ## P1 - Hoàn thiện bốn dịch vụ end-user
 

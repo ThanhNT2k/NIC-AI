@@ -70,6 +70,15 @@ Máy mới cần tạo `.env.local` từ `.env.example`; không sao chép secret
 
 ## Nhật ký bàn giao
 
+### 2026-07-20 - Hoàn thiện lớp bảo vệ P0 cho thao tác ghi
+
+- Mỗi session có CSRF token riêng; backend kiểm tra Origin, header, cookie và hash trong session cho mọi write action đã có.
+- Rate limit dùng bảng D1 chung cho login, register, tạo/sửa/xác nhận draft và submit request.
+- Thêm endpoint và UI thu hồi mọi session của tài khoản, kèm audit event.
+- Migration bổ sung `sessions.csrf_hash` tương thích session cũ và bảng `rate_limits`.
+- Thêm test SQLite áp dụng toàn bộ migration để chứng minh request của hai user thuộc hai organization không bị lẫn và idempotency index tồn tại.
+- Việc tiếp theo: P1 booking với space catalog, availability và chống trùng thời gian; tiếp tục hoàn chỉnh audit đăng nhập/thay đổi quyền.
+
 ### 2026-07-20 - Đồng bộ nhận diện NIC và hoàn thiện submit guardrail
 
 - Đối chiếu `nic.gov.vn`, dùng logo/ảnh kiến trúc NIC công khai, bảng màu xanh chàm và cam đỏ của thương hiệu.

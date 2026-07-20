@@ -20,6 +20,11 @@ const requests = [
   { id: "REQ-0709", title: "Cấp thẻ cho thành viên mới", status: "Cần bổ sung", meta: "Phản hồi trước 17:00 hôm nay", step: 1 },
 ];
 
+function csrfHeaders(extra: Record<string, string> = {}) {
+  const token = document.cookie.split(";").map(value => value.trim()).find(value => value.startsWith("nic_csrf="))?.slice("nic_csrf=".length) ?? "";
+  return { ...extra, "X-CSRF-Token": decodeURIComponent(token) };
+}
+
 export function ConciergeWorkspace() {
   const [user, setUser] = useState<User | null>(null);
   const [authChecked, setAuthChecked] = useState(true);
@@ -33,22 +38,23 @@ export function ConciergeWorkspace() {
   if (!authChecked) return <main className="auth-loading" aria-label="Đang kiểm tra phiên đăng nhập"><span>NIC</span><p>Đang chuẩn bị không gian của bạn...</p></main>;
   if (!user) return <AuthScreen onAuthenticated={setUser} />;
 
-  async function logout() { await fetch("/api/auth/logout", { method: "POST" }); setUser(null); }
+  async function logout() { await fetch("/api/auth/logout", { method: "POST", headers: csrfHeaders() }); setUser(null); }
+  async function revokeAllSessions() { if (!window.confirm("Đăng xuất tài khoản này trên tất cả thiết bị?")) return; await fetch("/api/auth/revoke-all", { method: "POST", headers: csrfHeaders() }); setUser(null); }
   async function createDraft(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); if (!selectedService) return;
     const form = new FormData(event.currentTarget);
-    const response = await fetch("/api/service-drafts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ serviceType: selectedService.type, title: form.get("title"), details: form.get("details") }) });
+    const response = await fetch("/api/service-drafts", { method: "POST", headers: csrfHeaders({ "Content-Type": "application/json" }), body: JSON.stringify({ serviceType: selectedService.type, title: form.get("title"), details: form.get("details") }) });
     const data = await response.json();
     if (!response.ok) return setDraftMessage(data.error ?? "Không thể lưu bản nháp.");
     setActiveDraft(data.draft); setDraftMessage("Đã lưu bản nháp. Hãy kiểm tra thông tin và xác nhận phiên bản hiện tại.");
     event.currentTarget.reset();
   }
   async function confirmDraft() {
-    if (!activeDraft) return; const response = await fetch(`/api/service-drafts/${activeDraft.id}/confirm`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ version: activeDraft.version }) }); const data = await response.json();
+    if (!activeDraft) return; const response = await fetch(`/api/service-drafts/${activeDraft.id}/confirm`, { method: "POST", headers: csrfHeaders({ "Content-Type": "application/json" }), body: JSON.stringify({ version: activeDraft.version }) }); const data = await response.json();
     if (!response.ok) return setDraftMessage("Bản nháp đã thay đổi. Vui lòng mở lại và kiểm tra phiên bản mới nhất."); setActiveDraft(data.draft); setDraftMessage("Đã xác nhận phiên bản hiện tại. Bạn có thể gửi yêu cầu chính thức.");
   }
   async function submitDraft() {
-    if (!activeDraft) return; const response = await fetch(`/api/service-drafts/${activeDraft.id}/submit`, { method: "POST", headers: { "Idempotency-Key": crypto.randomUUID() + crypto.randomUUID() } }); const data = await response.json();
+    if (!activeDraft) return; const response = await fetch(`/api/service-drafts/${activeDraft.id}/submit`, { method: "POST", headers: csrfHeaders({ "Idempotency-Key": crypto.randomUUID() + crypto.randomUUID() }) }); const data = await response.json();
     if (!response.ok) return setDraftMessage("Chưa thể gửi. Bản nháp phải được xác nhận đúng phiên bản hiện tại."); setActiveDraft({ ...activeDraft, status: "submitted" }); setDraftMessage(`Đã gửi yêu cầu ${data.request.id}.`);
   }
   return <main className="portal-shell">
@@ -68,7 +74,7 @@ export function ConciergeWorkspace() {
         <section className="requests-panel" aria-labelledby="requests-title"><div className="section-heading"><div><h2 id="requests-title">Yêu cầu gần đây</h2><p>Theo dõi tiến độ những việc bạn đã gửi.</p></div><button>Xem tất cả</button></div><div className="request-list">{requests.map(request => <article className="request-item" key={request.id}><div className="request-main"><span>{request.id}</span><strong>{request.title}</strong><small>{request.meta}</small></div><div className="request-progress" aria-label={`Tiến độ ${request.step} trên 3 bước`}>{[1,2,3].map(step => <i key={step} className={step <= request.step ? "done" : ""} />)}</div><b className={`request-status step-${request.step}`}>{request.status}</b><button aria-label={`Mở ${request.title}`}>→</button></article>)}</div></section>
         <aside className="help-panel"><span className="ai-mark">AI</span><div><h2>Hỏi NIC Copilot</h2><p>Tìm chính sách, kiểm tra thông tin hoặc chuẩn bị một bản nháp yêu cầu.</p></div><div className="prompt-list"><button>Phòng nào còn trống chiều nay?</button><button>Quy trình đăng ký khách ra sao?</button></div><button className="primary-action" onClick={() => setCopilotOpen(true)}>Bắt đầu trao đổi <span aria-hidden="true">→</span></button><small>Copilot chỉ chuẩn bị. Bạn luôn là người kiểm tra và quyết định gửi.</small></aside>
       </div>
-      <footer className="scope-note"><span>i</span><p>Bạn đang sử dụng dịch vụ trong phạm vi <strong>Innovate Vietnam tại NIC Hòa Lạc</strong>.</p><button>Xem quyền của tôi</button></footer>
+      <footer className="scope-note"><span>i</span><p>Bạn đang sử dụng dịch vụ trong phạm vi <strong>{user.organization} tại NIC Hòa Lạc</strong>.</p><button onClick={revokeAllSessions}>Đăng xuất mọi thiết bị</button></footer>
     </section>
     <div className={`copilot-overlay ${copilotOpen ? "open" : ""}`} onClick={() => setCopilotOpen(false)} aria-hidden={!copilotOpen} />
     <aside className={`copilot-drawer ${copilotOpen ? "open" : ""}`} aria-label="NIC AI Copilot" aria-hidden={!copilotOpen}><div className="copilot-heading"><div><span>AI</span><div><strong>NIC Copilot</strong><small>Hỗ trợ theo quyền của bạn</small></div></div><button onClick={() => setCopilotOpen(false)} aria-label="Đóng Copilot">×</button></div><div className="copilot-message"><strong>NIC Copilot</strong><p>Tôi có thể tìm hướng dẫn, kiểm tra thông tin hoặc tạo bản nháp. Tôi không thể tự phê duyệt hay gửi yêu cầu.</p></div><div className="copilot-prompts"><button>Kiểm tra phòng trống</button><button>Tìm quy trình liên quan</button><button>Tạo bản nháp yêu cầu</button></div><form className="copilot-composer" onSubmit={event => event.preventDefault()}><label htmlFor="copilot-input">Bạn cần hỗ trợ gì?</label><div><input id="copilot-input" placeholder="Nhập câu hỏi hoặc yêu cầu" /><button type="submit">Gửi</button></div></form></aside>

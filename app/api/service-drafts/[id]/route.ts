@@ -1,7 +1,8 @@
-import { currentUser, database } from "@/lib/d1-auth";
+import { database, enforceRateLimit, requireCsrf } from "@/lib/d1-auth";
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
-  const user = await currentUser(request); if (!user) return Response.json({ error: "AUTH_REQUIRED" }, { status: 401 });
+  const user = await requireCsrf(request); if (!user) return Response.json({ error: "CSRF_INVALID" }, { status: 403 });
+  if (!await enforceRateLimit(request, "draft.update", user.id, 60, 3600)) return Response.json({ error: "RATE_LIMITED" }, { status: 429 });
   const { id } = await context.params;
   const body = await request.json().catch(() => null) as { title?: string; details?: string; expectedVersion?: number } | null;
   const title = body?.title?.trim() ?? ""; const details = body?.details?.trim() ?? ""; const expectedVersion = body?.expectedVersion;

@@ -1,4 +1,4 @@
-import { currentUser, database } from "@/lib/d1-auth";
+import { currentUser, database, enforceRateLimit, requireCsrf } from "@/lib/d1-auth";
 
 const serviceTypes = new Set(["space_booking", "support", "event_registration", "access_card"]);
 export async function GET(request: Request) {
@@ -8,7 +8,8 @@ export async function GET(request: Request) {
   return Response.json({ drafts: result.results });
 }
 export async function POST(request: Request) {
-  const user = await currentUser(request); if (!user) return Response.json({ error: "AUTH_REQUIRED" }, { status: 401 });
+  const user = await requireCsrf(request); if (!user) return Response.json({ error: "CSRF_INVALID" }, { status: 403 });
+  if (!await enforceRateLimit(request, "draft.create", user.id, 30, 3600)) return Response.json({ error: "RATE_LIMITED" }, { status: 429 });
   const body = await request.json().catch(() => null) as { serviceType?: string; title?: string; details?: string } | null;
   const serviceType = body?.serviceType ?? ""; const title = body?.title?.trim() ?? ""; const details = body?.details?.trim() ?? "";
   if (!serviceTypes.has(serviceType) || title.length < 3 || title.length > 120 || details.length < 5 || details.length > 2000) return Response.json({ error: "Thông tin bản nháp chưa hợp lệ." }, { status: 400 });

@@ -46,3 +46,16 @@ test("official request reads remain tenant and owner scoped", async () => {
   assert.match(requests, /organization = \?/);
   assert.match(requests, /user\.organization/);
 });
+
+test("write routes require CSRF and distributed rate limits", async () => {
+  const auth = await readFile(new URL("../lib/d1-auth.ts", import.meta.url), "utf8");
+  const createDraft = await readFile(new URL("../app/api/service-drafts/route.ts", import.meta.url), "utf8");
+  const revoke = await readFile(new URL("../app/api/auth/revoke-all/route.ts", import.meta.url), "utf8");
+  assert.match(auth, /x-csrf-token/);
+  assert.match(auth, /csrf_hash/);
+  assert.match(auth, /ON CONFLICT\(bucket_key\)/);
+  assert.match(createDraft, /requireCsrf\(request\)/);
+  assert.match(createDraft, /enforceRateLimit/);
+  assert.match(revoke, /DELETE FROM sessions WHERE user_id = \?/);
+  assert.match(revoke, /session\.revoked_all/);
+});

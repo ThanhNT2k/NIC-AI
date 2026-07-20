@@ -1,7 +1,8 @@
-import { currentUser, database } from "@/lib/d1-auth";
+import { database, enforceRateLimit, requireCsrf } from "@/lib/d1-auth";
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
-  const user = await currentUser(request); if (!user) return Response.json({ error: "AUTH_REQUIRED" }, { status: 401 });
+  const user = await requireCsrf(request); if (!user) return Response.json({ error: "CSRF_INVALID" }, { status: 403 });
+  if (!await enforceRateLimit(request, "draft.confirm", user.id, 30, 3600)) return Response.json({ error: "RATE_LIMITED" }, { status: 429 });
   const { id } = await context.params; const body = await request.json().catch(() => null) as { version?: number } | null;
   if (!Number.isInteger(body?.version)) return Response.json({ error: "VALIDATION_FAILED" }, { status: 400 });
   const db = await database(); const now = Math.floor(Date.now() / 1000); const auditId = crypto.randomUUID();
