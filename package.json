@@ -6,13 +6,14 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "dev": "vinext dev",
+    "dev": "npm run db:local:migrate && vinext dev",
     "build": "vinext build",
     "start": "vinext start",
     "test": "npm run test:unit && npm run build && node --test tests/rendered-html.test.mjs",
     "test:unit": "tsc lib/request-policy.ts --outDir dist-test --module nodenext --moduleResolution nodenext --target es2022 && node --test tests/request-policy.test.mjs tests/auth-security.test.mjs tests/tenant-isolation.test.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "db:local:migrate": "wrangler d1 migrations apply site-creator-d1 --local --config wrangler.local.jsonc --persist-to .wrangler/state"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.7",

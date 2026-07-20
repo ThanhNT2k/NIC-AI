@@ -1,8 +1,5 @@
 import type { Metadata } from "next";
-import { Be_Vietnam_Pro } from "next/font/google";
 import "./globals.css";
-
-const vietnam = Be_Vietnam_Pro({ variable: "--font-vietnam", subsets: ["latin", "vietnamese"], weight: ["400", "500", "600", "700"] });
 
 export const metadata: Metadata = {
   title: "NIC Operations ERP",
@@ -11,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="vi"><body className={vietnam.variable}>{children}</body></html>;
+  return <html lang="vi"><body>{children}</body></html>;
 }

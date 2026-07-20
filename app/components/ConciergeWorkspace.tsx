@@ -1,11 +1,16 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
-import Image from "next/image";
+import { ComponentProps, FormEvent, useEffect, useState } from "react";
+import NextImage from "next/image";
 
 type User = { id: string; email: string; fullName: string; organization: string; role: string };
 type Service = { code: string; type: string; title: string; copy: string; action: string };
 type Draft = { id: string; version: number; confirmedVersion: number | null; status: string };
+type ApiPayload = { error?: string; user?: User; draft?: Draft; request?: { id: string } };
+
+function Image(props: ComponentProps<typeof NextImage>) {
+  return <NextImage {...props} unoptimized />;
+}
 
 const services: Service[] = [
   { code: "01", type: "space_booking", title: "Đặt phòng & không gian", copy: "Tìm phòng phù hợp và gửi yêu cầu đặt chỗ.", action: "Tìm không gian" },
@@ -23,6 +28,12 @@ const requests = [
 function csrfHeaders(extra: Record<string, string> = {}) {
   const token = document.cookie.split(";").map(value => value.trim()).find(value => value.startsWith("nic_csrf="))?.slice("nic_csrf=".length) ?? "";
   return { ...extra, "X-CSRF-Token": decodeURIComponent(token) };
+}
+
+async function readApiPayload(response: Response): Promise<ApiPayload> {
+  const body = await response.text();
+  if (!body) return {};
+  try { return JSON.parse(body) as ApiPayload; } catch { return {}; }
 }
 
 export function ConciergeWorkspace() {
@@ -84,6 +95,6 @@ export function ConciergeWorkspace() {
 
 function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: User) => void }) {
   const [mode, setMode] = useState<"login" | "register">("login"); const [error, setError] = useState(""); const [pending, setPending] = useState(false);
-  async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); setPending(true); setError(""); const form = new FormData(event.currentTarget); const response = await fetch(`/api/auth/${mode}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(Object.fromEntries(form)) }); const data = await response.json(); setPending(false); if (!response.ok) return setError(data.error ?? "Không thể tiếp tục."); onAuthenticated(data.user); }
+  async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); setPending(true); setError(""); try { const form = new FormData(event.currentTarget); const response = await fetch(`/api/auth/${mode}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(Object.fromEntries(form)) }); const data = await readApiPayload(response); if (!response.ok) return setError(data.error ?? "Không thể tiếp tục."); if (!data.user) return setError("Phản hồi từ máy chủ chưa đầy đủ. Vui lòng thử lại."); onAuthenticated(data.user); } catch { setError("Không thể kết nối máy chủ. Vui lòng thử lại."); } finally { setPending(false); } }
   return <main className="auth-shell"><section className="auth-story"><a className="brand-lockup" href="#"><Image src="/nic-logo.png" alt="Vietnam National Innovation Center" width={170} height={65} priority /><span><strong>Service Hub</strong><small>Dịch vụ tại NIC</small></span></a><div><span className="auth-eyebrow">CỔNG DỊCH VỤ NIC</span><h1>Kết nối nguồn lực. Thúc đẩy đổi mới.</h1><p>Đặt không gian, gửi yêu cầu hỗ trợ, đăng ký sự kiện và theo dõi tiến độ tại Trung tâm Đổi mới sáng tạo Quốc gia.</p></div><small>Vietnam National Innovation Center</small></section><section className="auth-panel"><div className="auth-card"><div><span>{mode === "login" ? "CHÀO MỪNG TRỞ LẠI" : "TẠO TÀI KHOẢN"}</span><h2>{mode === "login" ? "Đăng nhập" : "Bắt đầu với NIC"}</h2><p>{mode === "login" ? "Sử dụng tài khoản được cấp để tiếp tục." : "Tạo tài khoản thành viên doanh nghiệp."}</p></div><form onSubmit={submit}>{mode === "register" && <><label>Họ và tên<input name="fullName" required autoComplete="name" /></label><label>Doanh nghiệp<input name="organization" required autoComplete="organization" /></label></>}<label>Email<input name="email" type="email" required autoComplete="email" /></label><label>Mật khẩu<input name="password" type="password" required minLength={10} autoComplete={mode === "login" ? "current-password" : "new-password"} /></label>{error && <p className="auth-error" role="alert">{error}</p>}<button className="auth-submit" disabled={pending}>{pending ? "Đang xử lý..." : mode === "login" ? "Đăng nhập" : "Tạo tài khoản"}</button></form>{mode === "login" && <aside className="demo-account"><strong>Tài khoản kiểm thử</strong><span>thanh@demo.nic.vn</span><span>Mật khẩu: Demo@12345</span></aside>}<button className="auth-switch" onClick={() => { setMode(mode === "login" ? "register" : "login"); setError(""); }}>{mode === "login" ? "Chưa có tài khoản? Đăng ký" : "Đã có tài khoản? Đăng nhập"}</button></div></section></main>;
 }

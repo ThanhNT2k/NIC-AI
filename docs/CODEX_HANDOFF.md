@@ -70,6 +70,15 @@ Máy mới cần tạo `.env.local` từ `.env.example`; không sao chép secret
 
 ## Nhật ký bàn giao
 
+### 2026-07-20 - Ổn định môi trường local cho font, ảnh và đăng nhập
+
+- Thay `next/font` bằng Be Vietnam Pro tự phục vụ từ `public/fonts`, không còn sinh URL `file:///D:/...` trong HTML/CSS.
+- Logo NIC dùng ảnh tĩnh trực tiếp, tránh lỗi 400 từ bộ tối ưu ảnh trong Vinext.
+- Màn hình xác thực xử lý an toàn cả phản hồi lỗi rỗng/không phải JSON, không còn phát sinh `Unexpected end of JSON input`.
+- Thêm cấu hình Wrangler local và tự áp toàn bộ D1 migration trước `npm run dev`; tài khoản demo đăng nhập thành công với HTTP 200.
+- Đã chạy `npm run lint`, `npm test`, kiểm tra font/logo HTTP 200 và đăng nhập demo HTTP 200.
+- Việc tiếp theo: triển khai P1 booking gồm danh mục không gian, kiểm tra availability và chống trùng thời gian ở database/backend.
+
 ### 2026-07-20 - Hoàn thiện lớp bảo vệ P0 cho thao tác ghi
 
 - Mỗi session có CSRF token riêng; backend kiểm tra Origin, header, cookie và hash trong session cho mọi write action đã có.

@@ -16,4 +16,6 @@ test("renders the NIC end-user authentication entry", async () => {
   assert.match(html, /Đăng nhập/);
   assert.match(html, /thanh@demo.nic.vn/);
   assert.doesNotMatch(html, /codex-preview/);
+  assert.doesNotMatch(html, /file:\/\/\//);
+  assert.doesNotMatch(html, /D:\/Proj\/NIC-AI/);
 });
