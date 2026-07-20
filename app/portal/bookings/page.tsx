@@ -1,3 +1,3 @@
-import { ConciergeWorkspace } from "../../components/ConciergeWorkspace";
+import { BookingPortal } from "../../components/BookingPortal";
 
-export default function BookingsPage() { return <ConciergeWorkspace view="bookings" />; }
+export default function BookingsPage() { return <BookingPortal />; }

@@ -70,6 +70,16 @@ Máy mới cần tạo `.env.local` từ `.env.example`; không sao chép secret
 
 ## Nhật ký bàn giao
 
+### 2026-07-21 - Dashboard vận hành, booking chống trùng và maintenance work order
+
+- Thêm `/portal/operations` cho Service Desk/Facility với KPI, bộ lọc hàng đợi, phân công, cập nhật trạng thái; Facility có thêm lịch không gian và danh sách work order.
+- Thêm API dashboard, assignment/status theo capability và target department; mọi write action dùng session + CSRF + rate limit và ghi `audit_logs`.
+- Thêm `spaces`, `bookings`, `maintenance_work_orders` trong migration `0004`; booking được tạo bằng `INSERT ... SELECT ... WHERE NOT EXISTS` để chặn khoảng thời gian giao nhau trên D1.
+- Work order liên kết request Facility, có priority, lịch, assignee, resolution và state machine; partial unique index ngăn nhiều work order active cho cùng request.
+- Thêm tài khoản demo `desk@demo.nic.vn` và `facility@demo.nic.vn`, cùng mật khẩu demo hiện có; login role vận hành route thẳng tới dashboard.
+- Đã áp migration local, chạy `npm run lint` và `npm test`: 23 test đạt, build thành công. HTTP local xác nhận đăng nhập Facility 200 và dashboard trả đúng department; browser tích hợp không kết nối được localhost nên chưa có screenshot QA tự động.
+- Việc tiếp theo: SLA/notification/escalation, provider directory và technician calendar; sau đó visitor QR/check-in.
+
 ### 2026-07-21 - Mở rộng README theo chuẩn hồ sơ dự án
 
 - Viết lại `README.md` thành tài liệu tổng quan đầy đủ gồm bài toán, giải pháp, phạm vi sản phẩm, ma trận đáp ứng đề bài, phân quyền, kiến trúc, dữ liệu, AI Copilot, cài đặt local, kiểm thử, triển khai, bảo mật, giới hạn và roadmap.

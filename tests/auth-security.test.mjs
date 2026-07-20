@@ -57,6 +57,23 @@ test("ERP roles grant capabilities instead of trusting UI role labels", async ()
   assert.match(access, /organization:manage_members/);
   assert.match(auth, /organization_memberships/);
   assert.match(auth, /capabilitiesFor/);
+  assert.match(access, /booking:manage/);
+  assert.match(access, /work_order:manage/);
+});
+
+test("operations writes enforce capability, team scope, CSRF and audit", async () => {
+  const requestRoute = await readFile(new URL("../app/api/operations/requests/[id]/route.ts", import.meta.url), "utf8");
+  const bookingRoute = await readFile(new URL("../app/api/bookings/route.ts", import.meta.url), "utf8");
+  const workOrderRoute = await readFile(new URL("../app/api/work-orders/route.ts", import.meta.url), "utf8");
+  for (const route of [requestRoute, bookingRoute, workOrderRoute]) {
+    assert.match(route, /requireCsrf\(request\)/);
+    assert.match(route, /enforceRateLimit/);
+    assert.match(route, /audit_logs/);
+  }
+  assert.match(requestRoute, /target_department = \?/);
+  assert.match(bookingRoute, /NOT EXISTS/);
+  assert.doesNotMatch(bookingRoute, /body\?\.requesterId/);
+  assert.match(workOrderRoute, /target_department='facility'/);
 });
 
 test("write routes require CSRF and distributed rate limits", async () => {

@@ -10,7 +10,7 @@
   ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)
   ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=111)
   ![D1](https://img.shields.io/badge/Cloudflare-D1-F38020?logo=cloudflare&logoColor=white)
-  ![Tests](https://img.shields.io/badge/tests-17%20passing-2ea44f)
+  ![Tests](https://img.shields.io/badge/tests-23%20passing-2ea44f)
 
   [Private demo](https://nic-service-hub.ntt-121020.chatgpt.site) · [Technical documentation](docs/README.md) · [Current handoff](docs/CODEX_HANDOFF.md)
 </div>
@@ -69,17 +69,17 @@ The table is intentionally honest: UI prototypes are not counted as completed op
 | Receive facility/maintenance requests | **Implemented foundation** | Dedicated support form; draft → confirm → submit; D1 persistence and audit | Work-order detail, attachments and SLA |
 | Support companies during NIC visits/work | **Partial** | Customer portal, request tracking, booking/event/access forms | Notifications and full visitor journey |
 | Coordinate building service providers | **Not implemented** | Request routing schema supports operational teams | Provider directory, assignment, acceptance and escalation |
-| Schedule repairs | **Not implemented** | Facility request routing exists | Technician calendar, repair slots and maintenance work orders |
+| Schedule repairs | **Partial** | Maintenance work orders, assignment, priority, schedule and lifecycle | Provider/technician calendar and SLA escalation |
 | Catering / tea-break requests | **Not implemented** | Event form accepts free-text support needs | Catering catalog, quantities, pricing and supplier workflow |
 | Event logistics | **Partial** | Event registration form and Event team routing | Equipment, catering, checklist, milestones and approvals |
-| Workspace reservations | **Partial** | Space form and catalog UI | Real availability, capacity validation and anti-overlap transaction |
+| Workspace reservations | **Implemented (MVP)** | Space catalog, booking ledger, capacity validation and database anti-overlap | Approval policy and recurring bookings |
 | Visitor registration | **Partial** | Access-card/visitor-related form and Security routing | Visitor entity, host, QR, check-in/check-out and access zones |
 | Facility/service information | **Partial** | Controlled Copilot knowledge and help center | Versioned knowledge base, retrieval and verified citations |
-| Cross-team ERP authorization | **Implemented foundation** | Membership, department, capability grants and request routing | Operations dashboards and assignment/status APIs |
+| Cross-team ERP authorization | **Implemented (MVP)** | Capability grants, department queues, operations dashboards and assignment/status APIs | SLA escalation, comments and evidence |
 
 ### Current maturity
 
-This repository is a **working MVP/prototype**, not a production-complete facility ERP. Authentication, request submission guardrails, authorization foundations and the end-user experience are implemented. Booking, work orders, providers, catering and visitor check-in remain roadmap items.
+This repository is a **working MVP/prototype**, not a production-complete facility ERP. Authentication, request submission guardrails, operational dashboards, booking anti-overlap and maintenance work orders are implemented. Providers, catering and visitor check-in remain roadmap items.
 
 ---
 
@@ -133,7 +133,8 @@ Submit requires ownership, the current confirmed version and an idempotency key.
 |---|---|
 | `/portal` | Customer workspace and common services |
 | `/portal/requests` | Requests visible within the user’s authorization scope |
-| `/portal/bookings` | Space catalog prototype |
+| `/portal/bookings` | Real space catalog, booking form and personal booking ledger |
+| `/portal/operations` | Service Desk/Facility queue, assignment, status, booking agenda and work orders |
 | `/portal/help` | Help center and Copilot entry point |
 
 ---
@@ -294,7 +295,7 @@ npm run dev
 
 The dev command applies pending local D1 migrations and starts the app at [http://localhost:3000](http://localhost:3000).
 
-### Demo account
+### Demo accounts
 
 ```text
 Email:    thanh@demo.nic.vn
@@ -304,6 +305,13 @@ Org:      Innovate Vietnam
 ```
 
 This account is test data only.
+
+Operational accounts use the same test password:
+
+| Email | Role | Landing route |
+|---|---|---|
+| `desk@demo.nic.vn` | `service_desk` | `/portal/operations` |
+| `facility@demo.nic.vn` | `facility_manager` | `/portal/operations` |
 
 ### Useful commands
 
@@ -321,7 +329,7 @@ This account is test data only.
 
 ## 7. Testing & Evaluation
 
-Current verified baseline: **17 automated tests passing**.
+Current verified baseline: **23 automated tests passing** (22 unit/integration and 1 rendered-page test).
 
 | Test area | Evidence |
 |---|---|
@@ -330,6 +338,8 @@ Current verified baseline: **17 automated tests passing**.
 | Request integrity | Ownership, version confirmation and idempotency |
 | Tenant isolation | Two-organization SQLite integration scenario |
 | ERP authorization | Membership, department routing and capability policy checks |
+| Operations workflow | Request/work-order transitions, scoped assignment and audit requirements |
+| Booking integrity | Capacity checks and overlap rejection against migrated SQLite schema |
 | AI safety | No submission capability or direct official-request insert |
 | Public navigation | Home routes explicitly to login and registration |
 | Rendering | Production worker renders public NIC homepage without local file URLs |
@@ -343,8 +353,8 @@ npm test
 Not yet measured:
 
 - end-to-end browser journeys;
-- booking concurrency/anti-overlap;
-- work-order SLA correctness;
+- high-contention booking concurrency against remote D1;
+- work-order SLA and escalation correctness;
 - Copilot intent/citation quality on a hand-labeled evaluation set;
 - accessibility audit and performance budgets.
 
@@ -391,12 +401,10 @@ Before production completion, the project still requires an approved identity pr
 
 ### Known limitations
 
-- Space availability shown in the UI is sample data, not a real booking ledger.
-- No anti-overlap transaction exists yet.
-- No maintenance work-order, technician or supplier scheduling domain.
+- Booking is real and rejects overlap, but does not yet support recurring reservations or an approval workflow.
+- Maintenance work orders are internal; no provider portal, SLA escalation or technician calendar yet.
 - Catering/tea-break is not modeled as a structured service.
 - Visitor QR and check-in/check-out do not exist.
-- Operations users do not yet have assignment/status dashboards.
 - Request pages still contain some illustrative records.
 - Copilot citations are controlled labels, not retrieved knowledge-document citations.
 - Production OpenAI secret is not configured.
@@ -405,10 +413,9 @@ Before production completion, the project still requires an approved identity pr
 
 #### P1 — Operational core
 
-1. Space/resource schema, availability query and anti-overlap booking transaction.
-2. Service Desk and Facility dashboards.
-3. Assignment, status transition, comments, evidence and SLA APIs.
-4. Maintenance work orders and technician/provider scheduling.
+1. Comments, evidence, SLA timers, notification and escalation APIs.
+2. Provider directory, technician calendar and external assignment/acceptance.
+3. Booking approval policy, recurring reservations and calendar views.
 
 #### P2 — Visitor and event operations
 

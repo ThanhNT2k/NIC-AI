@@ -76,7 +76,49 @@ export const serviceRequests = sqliteTable("service_requests", {
   visibility: text("visibility").notNull().default("organization"),
   idempotencyKey: text("idempotency_key").notNull(),
   createdAt: integer("created_at").notNull(),
+  updatedAt: integer("updated_at"),
 }, (table) => [uniqueIndex("service_requests_owner_idempotency_idx").on(table.ownerId, table.idempotencyKey)]);
+
+export const spaces = sqliteTable("spaces", {
+  id: text("id").primaryKey(),
+  code: text("code").notNull().unique(),
+  name: text("name").notNull(),
+  location: text("location").notNull(),
+  capacity: integer("capacity").notNull(),
+  equipment: text("equipment").notNull().default(""),
+  status: text("status").notNull().default("active"),
+});
+
+export const bookings = sqliteTable("bookings", {
+  id: text("id").primaryKey(),
+  requestId: text("request_id").references(() => serviceRequests.id),
+  requesterId: text("requester_id").notNull().references(() => users.id),
+  organization: text("organization").notNull(),
+  spaceId: text("space_id").notNull().references(() => spaces.id),
+  title: text("title").notNull(),
+  attendeeCount: integer("attendee_count").notNull(),
+  startsAt: integer("starts_at").notNull(),
+  endsAt: integer("ends_at").notNull(),
+  status: text("status").notNull().default("confirmed"),
+  notes: text("notes").notNull().default(""),
+  createdAt: integer("created_at").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+});
+
+export const maintenanceWorkOrders = sqliteTable("maintenance_work_orders", {
+  id: text("id").primaryKey(),
+  requestId: text("request_id").notNull().references(() => serviceRequests.id),
+  title: text("title").notNull(),
+  location: text("location").notNull(),
+  priority: text("priority").notNull().default("normal"),
+  status: text("status").notNull().default("open"),
+  assignedTo: text("assigned_to").references(() => users.id),
+  scheduledAt: integer("scheduled_at"),
+  resolution: text("resolution").notNull().default(""),
+  createdBy: text("created_by").notNull().references(() => users.id),
+  createdAt: integer("created_at").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+});
 
 export const auditLogs = sqliteTable("audit_logs", {
   id: text("id").primaryKey(),
