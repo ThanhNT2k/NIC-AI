@@ -128,7 +128,20 @@ function PortalSection({ view, user, onCopilot }: { view: Exclude<PortalView, "h
 function CopilotDrawer({ open, onClose, onSelectService }: { open: boolean; onClose: () => void; onSelectService: (type: string) => void }) {
   const [messages, setMessages] = useState<ChatMessage[]>([{ role: "assistant", text: "Chào bạn. Tôi có thể tìm hướng dẫn, kiểm tra thông tin sẵn có hoặc giúp chuẩn bị form dịch vụ. Tôi không thể tự gửi yêu cầu thay bạn." }]);
   const [pending, setPending] = useState(false);
-  async function send(text: string) { const query = text.trim(); if (!query || pending) return; setMessages(current => [...current, { role: "user", text: query }]); setPending(true); try { const response = await fetch("/api/copilot", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: query }) }); const data = await response.json() as { answer?: string; sources?: string[]; suggestedService?: string }; setMessages(current => [...current, { role: "assistant", text: data.answer ?? "Tôi chưa thể xử lý câu hỏi này.", sources: data.sources, suggestedService: data.suggestedService }]); } catch { setMessages(current => [...current, { role: "assistant", text: "Kết nối đang gián đoạn. Bạn vui lòng thử lại." }]); } finally { setPending(false); } }
+  async function send(text: string) {
+    const query = text.trim();
+    if (!query || pending) return;
+    const history = messages.slice(-8).map(({ role, text: turnText }) => ({ role, text: turnText }));
+    setMessages(current => [...current, { role: "user", text: query }]);
+    setPending(true);
+    try {
+      const response = await fetch("/api/copilot", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: query, history }) });
+      const data = await response.json() as { answer?: string; sources?: string[]; suggestedService?: string };
+      setMessages(current => [...current, { role: "assistant", text: data.answer ?? "Tôi chưa thể xử lý câu hỏi này.", sources: data.sources, suggestedService: data.suggestedService }]);
+    } catch {
+      setMessages(current => [...current, { role: "assistant", text: "Kết nối đang gián đoạn. Bạn vui lòng thử lại." }]);
+    } finally { setPending(false); }
+  }
   return <><div className={`copilot-overlay ${open ? "open" : ""}`} onClick={onClose} aria-hidden={!open} /><aside className={`copilot-drawer ${open ? "open" : ""}`} aria-label="NIC AI Copilot" aria-hidden={!open}><div className="copilot-heading"><div><span>AI</span><div><strong>NIC Copilot</strong><small>Tra cứu và chuẩn bị, không tự gửi</small></div></div><button onClick={onClose} aria-label="Đóng Copilot">×</button></div><div className="copilot-thread" aria-live="polite">{messages.map((message, index) => <article key={index} className={`chat-bubble ${message.role}`}><strong>{message.role === "assistant" ? "NIC Copilot" : "Bạn"}</strong><p>{message.text}</p>{message.sources?.length ? <div className="chat-sources">{message.sources.map(source => <span key={source}>{source}</span>)}</div> : null}{message.suggestedService ? <button onClick={() => onSelectService(message.suggestedService!)}>Mở form để kiểm tra</button> : null}</article>)}{pending && <div className="chat-typing">NIC Copilot đang tìm thông tin...</div>}</div><div className="copilot-prompts">{["Phòng nào phù hợp cho 20 người?", "Quy trình đăng ký khách ra sao?", "Tôi cần hỗ trợ thiết bị"].map(prompt => <button key={prompt} onClick={() => send(prompt)}>{prompt}</button>)}</div><form className="copilot-composer" onSubmit={event => { event.preventDefault(); const input = new FormData(event.currentTarget).get("message")?.toString() ?? ""; void send(input); event.currentTarget.reset(); }}><label htmlFor="copilot-input">Bạn cần hỗ trợ gì?</label><div><input id="copilot-input" name="message" required placeholder="Nhập câu hỏi hoặc yêu cầu" /><button type="submit" disabled={pending}>Gửi</button></div></form></aside></>;
 }
 

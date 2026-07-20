@@ -70,6 +70,16 @@ Máy mới cần tạo `.env.local` từ `.env.example`; không sao chép secret
 
 ## Nhật ký bàn giao
 
+### 2026-07-21 - Hiểu ngôn ngữ tự nhiên và ngữ cảnh cho NIC Copilot
+
+- Thay nhận diện regex đơn lẻ bằng hai tầng: OpenAI Responses API cho hiểu ngôn ngữ tự nhiên và bộ phân loại tiếng Việt local làm fallback.
+- Client gửi tối đa 8 lượt hội thoại gần nhất; Copilot hiểu tham chiếu theo ngữ cảnh thay vì xử lý từng câu độc lập.
+- OpenAI trả Structured Outputs theo JSON schema giới hạn `answer`, `sources` và một trong bốn `suggestedService`; prompt cấm tuyên bố đã submit/phê duyệt.
+- Model mặc định `gpt-5.6-sol`, có thể đổi bằng `OPENAI_MODEL`; khóa `OPENAI_API_KEY` chỉ đọc tại server runtime.
+- Khi chưa cấu hình khóa, fallback bỏ dấu, tổng hợp ngữ cảnh gần và chấm điểm cụm ý định để vẫn hiểu nhiều cách diễn đạt phổ biến.
+- Đã chạy `npm run lint` và `npm test`: 15 test đạt, build thành công.
+- Blocker triển khai AI đầy đủ: Sites production chưa có `OPENAI_API_KEY`; cần cấu hình secret runtime để bật tầng mô hình ngôn ngữ.
+
 ### 2026-07-20 - Trang chủ công khai, portal routes và Copilot hội thoại
 
 - Route `/` trở thành trang chủ công khai mang nhận diện NIC, giới thiệu dịch vụ và quy trình sử dụng.

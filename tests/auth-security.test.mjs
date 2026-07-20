@@ -80,5 +80,9 @@ test("Copilot remains authenticated and has no submit capability", async () => {
   const route = await readFile(new URL("../app/api/copilot/route.ts", import.meta.url), "utf8");
   assert.match(route, /currentUser\(request\)/);
   assert.match(route, /suggestedService/);
+  assert.match(route, /client\.responses\.create/);
+  assert.match(route, /history\.slice\(-8\)/);
+  assert.match(route, /json_schema/);
+  assert.match(route, /localUnderstanding/);
   assert.doesNotMatch(route, /submit_request|service_requests|INSERT INTO/);
 });
