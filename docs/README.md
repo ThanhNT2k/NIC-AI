@@ -4,15 +4,16 @@ Thư mục này mô tả phương án giải quyết bài toán, kiến trúc m�
 
 ## Danh mục
 
-1. [Mô hình sản phẩm ERP](./erp-product-model.md)
-2. [Tài khoản, phòng ban và phân quyền](./identity-access-control.md)
-3. [Layout theo role](./role-based-layouts.md)
-4. [Phương án giải quyết bài toán](./solution-overview.md)
-5. [Kiến trúc hệ thống](./architecture.md)
-6. [Luồng request và API](./request-workflow.md)
-7. [AI Copilot và Hybrid RAG](./ai-rag.md)
-8. [Dữ liệu, RLS và audit](./data-security.md)
-9. [Kiểm thử, CI/CD và vận hành](./testing-operations.md)
+1. [Codex handoff — trạng thái và bước tiếp theo](./CODEX_HANDOFF.md)
+2. [Mô hình sản phẩm ERP](./erp-product-model.md)
+3. [Tài khoản, phòng ban và phân quyền](./identity-access-control.md)
+4. [Layout theo role](./role-based-layouts.md)
+5. [Phương án giải quyết bài toán](./solution-overview.md)
+6. [Kiến trúc hệ thống](./architecture.md)
+7. [Luồng request và API](./request-workflow.md)
+8. [AI Copilot và Hybrid RAG](./ai-rag.md)
+9. [Dữ liệu, RLS và audit](./data-security.md)
+10. [Kiểm thử, CI/CD và vận hành](./testing-operations.md)
 
 ## Trạng thái tài liệu
 
@@ -31,4 +32,3 @@ Thư mục này mô tả phương án giải quyết bài toán, kiến trúc m�
 - Backend chỉ submit sau authentication, authorization và validation.
 - Mọi thao tác quan trọng cần audit log; dữ liệu người dùng được bảo vệ bằng RLS.
 - Quyền hiệu lực là giao của role, phòng ban, phạm vi tổ chức và quan hệ với bản ghi.
-

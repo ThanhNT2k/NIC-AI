@@ -1,0 +1,78 @@
+# Codex handoff — NIC Operations ERP
+
+Cập nhật gần nhất: 2026-07-20
+
+File này giúp Codex tiếp tục công việc trên máy hoặc task mới mà không cần người dùng mô tả lại. Hãy cập nhật file sau mỗi thay đổi đáng kể; chỉ ghi trạng thái có thể kiểm chứng từ repository.
+
+## Tóm tắt hiện tại
+
+Repository đang ở giai đoạn scaffold/prototype, chưa phải ERP production hoàn chỉnh. Phần chạy được hiện nay tập trung vào giao diện AI Copilot tiếng Việt, request draft có thể chỉnh sửa và policy chứng minh AI không thể submit thay người dùng.
+
+Kiến trúc mục tiêu là web ERP dạng modular monolith dùng Supabase PostgreSQL làm nguồn dữ liệu chính. AI Copilot hỗ trợ hiểu ngôn ngữ, Hybrid RAG và tạo draft; authentication, authorization và submit chính thức thuộc backend/database.
+
+## Đã có trong repository
+
+- Prototype UI: `app/components/ConciergeWorkspace.tsx`.
+- Entry/layout và style: `app/page.tsx`, `app/layout.tsx`, `app/globals.css`.
+- Domain guardrail mẫu: `lib/request-policy.ts`.
+- Unit test policy: `tests/request-policy.test.mjs`.
+- Server-render test: `tests/rendered-html.test.mjs`.
+- Schema Drizzle: `db/schema.ts`; kết nối database: `db/index.ts`.
+- Migration Supabase ban đầu: `supabase/migrations/202607200001_initial.sql`.
+- Worker entry: `worker/index.ts`.
+- Bộ tài liệu yêu cầu, kiến trúc, workflow, RAG, security và vận hành trong `docs/`.
+- Cấu hình hosting: `.openai/hosting.json`.
+
+## Chưa hoàn thiện
+
+- ERP shell, navigation và dashboard theo role.
+- Supabase Auth và protected routes.
+- RBAC/ABAC, organization scope và RLS được kiểm thử end-to-end.
+- Các domain Facility, Asset, Event, Booking, Service Request và Workflow.
+- API/service layer cho draft, confirm và submit transaction.
+- Tích hợp OpenAI runtime, ingestion/retrieval Hybrid RAG và citation thật.
+- Audit runtime, observability, rate limiting và deployment production.
+
+## Quyết định đã chốt
+
+- ERP là sản phẩm lõi; chatbot không thay thế ERP.
+- Người dùng phải xác nhận phiên bản draft hiện tại trước khi submit.
+- AI không có tool submit và không giữ service-role key.
+- Quyền hiệu lực là giao của role, phòng ban, organization scope và quan hệ với bản ghi.
+- Giai đoạn đầu dùng modular monolith và PostgreSQL FTS + pgvector, chưa tách vector database riêng.
+- Client state không phải bằng chứng authorization; backend/RLS luôn kiểm tra lại.
+
+Chi tiết và lý do nằm trong `docs/solution-overview.md`, `docs/architecture.md`, `docs/request-workflow.md` và `docs/data-security.md`.
+
+## Hướng tiếp theo đề xuất
+
+Ưu tiên theo thứ tự:
+
+1. Thiết lập Supabase Auth và server-side session.
+2. Xây permission model tối thiểu cùng RLS test cho tenant/user isolation.
+3. Tạo API/application service cho vòng đời draft → confirm → submit bằng transaction và idempotency key.
+4. Nối prototype UI vào dữ liệu thật.
+5. Sau khi trust boundary ổn định, tích hợp OpenAI tool allowlist và Hybrid RAG có citation.
+6. Mở rộng ERP shell và các phân hệ nghiệp vụ theo `docs/erp-product-model.md`.
+
+Không bắt đầu bằng việc cho AI ghi trực tiếp request chính thức hoặc dùng service-role key ở client.
+
+## Kiểm tra chuẩn
+
+```bash
+npm ci
+npm run lint
+npm test
+npm audit --omit=dev
+```
+
+Máy mới cần tạo `.env.local` từ `.env.example`; không sao chép secret vào Git hoặc file handoff.
+
+## Nhật ký bàn giao
+
+### 2026-07-20 — Tạo bộ nhớ repository cho Codex
+
+- Thêm `AGENTS.md` làm hướng dẫn tự nạp cho mọi task trong repository.
+- Thêm file handoff này để lưu trạng thái, quyết định và bước tiếp theo.
+- Chưa thay đổi source hoặc hành vi runtime.
+- Việc tiếp theo: chọn một mục trong “Hướng tiếp theo đề xuất”, triển khai và cập nhật lại handoff.

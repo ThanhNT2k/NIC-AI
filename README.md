@@ -43,3 +43,5 @@ AI chỉ được cấp các tool `search_knowledge`, `check_availability` và `
 ## Tài liệu kỹ thuật
 
 Xem [docs/README.md](./docs/README.md) để đọc phương án giải quyết bài toán, kiến trúc mục tiêu, luồng request/API, thiết kế Hybrid RAG, RLS/audit và kế hoạch kiểm thử–vận hành.
+
+Khi tiếp tục bằng Codex trên máy hoặc task mới, Codex phải đọc [AGENTS.md](./AGENTS.md) và [docs/CODEX_HANDOFF.md](./docs/CODEX_HANDOFF.md) trước để khôi phục quy ước, trạng thái hiện tại và bước tiếp theo mà không cần mô tả lại project.
