@@ -7,6 +7,8 @@ type User = { id: string; email: string; fullName: string; organization: string;
 type Service = { code: string; type: string; title: string; copy: string; action: string };
 type Draft = { id: string; version: number; confirmedVersion: number | null; status: string };
 type ApiPayload = { error?: string; user?: User; draft?: Draft; request?: { id: string } };
+type PortalView = "home" | "requests" | "bookings" | "help";
+type ChatMessage = { role: "user" | "assistant"; text: string; sources?: string[]; suggestedService?: string };
 type ServiceField = { name: string; label: string; type?: "text" | "date" | "time" | "number" | "tel"; placeholder?: string; min?: string; options?: string[] };
 type ServiceForm = { eyebrow: string; detailsLabel: string; detailsPlaceholder: string; fields: ServiceField[] };
 
@@ -98,18 +100,50 @@ async function readApiPayload(response: Response): Promise<ApiPayload> {
   try { return JSON.parse(body) as ApiPayload; } catch { return {}; }
 }
 
-export function ConciergeWorkspace() {
+const portalNav: Array<{ view: PortalView; label: string; href: string }> = [
+  { view: "home", label: "Trang chủ", href: "/portal" },
+  { view: "requests", label: "Yêu cầu của tôi", href: "/portal/requests" },
+  { view: "bookings", label: "Lịch & đặt chỗ", href: "/portal/bookings" },
+  { view: "help", label: "Trung tâm trợ giúp", href: "/portal/help" },
+];
+
+function PortalSection({ view, user, onCopilot }: { view: Exclude<PortalView, "home">; user: User; onCopilot: () => void }) {
+  const content = {
+    requests: { eyebrow: "THEO DÕI DỊCH VỤ", title: "Yêu cầu của tôi", copy: "Xem trạng thái, phản hồi và các bước cần hoàn tất cho mọi yêu cầu đã gửi." },
+    bookings: { eyebrow: "KHÔNG GIAN NIC", title: "Lịch & đặt chỗ", copy: "Khám phá không gian phù hợp và chuẩn bị yêu cầu đặt chỗ theo lịch của bạn." },
+    help: { eyebrow: "TRI THỨC VẬN HÀNH", title: "Trung tâm trợ giúp", copy: "Tìm quy trình, chính sách và câu trả lời được kiểm chứng trước khi tạo yêu cầu." },
+  }[view];
+  return <main className="portal-shell"><header className="portal-header"><a className="brand-lockup" href="/portal"><Image src="/nic-logo.png" alt="Vietnam National Innovation Center" width={142} height={54} priority /><span><strong>Service Hub</strong><small>Dịch vụ tại NIC</small></span></a><nav className="portal-nav" aria-label="Điều hướng chính">{portalNav.map(item => <a key={item.view} className={view === item.view ? "active" : ""} href={item.href}>{item.label}</a>)}</nav><div className="header-actions"><button className="copilot-header-button" onClick={onCopilot}>NIC Copilot</button><span className="profile-avatar">{user.fullName.slice(0, 2).toUpperCase()}</span></div></header><section className="portal-page"><header className="portal-page-heading"><span>{content.eyebrow}</span><h1>{content.title}</h1><p>{content.copy}</p></header>{view === "requests" && <div className="page-panel"><div className="filter-row"><button className="active">Tất cả</button><button>Đang xử lý</button><button>Cần bổ sung</button><a href="/portal">Tạo yêu cầu mới</a></div><div className="request-table">{requests.map(request => <article key={request.id}><div><span>{request.id}</span><strong>{request.title}</strong><small>{request.meta}</small></div><b className={`request-status step-${request.step}`}>{request.status}</b><button>Xem chi tiết</button></article>)}</div></div>}{view === "bookings" && <div className="space-catalog">{[
+    ["Phòng hội thảo 2.1", "80 người", "Trống từ 13:30", "Màn hình LED · Âm thanh"],
+    ["Phòng họp 3.2", "12 người", "Trống từ 15:00", "Họp trực tuyến · Bảng viết"],
+    ["Innovation Hall", "250 người", "Còn 2 khung giờ", "Sự kiện · Trưng bày"],
+  ].map(([name, capacity, availability, equipment]) => <article key={name}><span className="availability-dot">CÓ THỂ ĐẶT</span><h2>{name}</h2><p>{capacity} · {equipment}</p><strong>{availability}</strong><a href="/portal">Chuẩn bị yêu cầu đặt chỗ</a></article>)}</div>}{view === "help" && <div className="help-layout"><section className="knowledge-list">{[
+    ["Đặt phòng và không gian", "Điều kiện, thời hạn và quy trình xác nhận đặt chỗ."],
+    ["Đăng ký khách và thẻ ra vào", "Hướng dẫn cung cấp thông tin và thời gian xử lý."],
+    ["Hỗ trợ kỹ thuật tại sự kiện", "Danh mục thiết bị và đầu mối hỗ trợ vận hành."],
+    ["Quy định sử dụng cơ sở vật chất", "Trách nhiệm của đơn vị đăng ký và người sử dụng."],
+  ].map(([title, copy], index) => <article key={title}><span>0{index + 1}</span><div><h2>{title}</h2><p>{copy}</p></div><button>Đọc hướng dẫn</button></article>)}</section><aside className="help-copilot"><span>AI COPILOT</span><h2>Chưa tìm thấy câu trả lời?</h2><p>Hỏi NIC Copilot để tìm đúng hướng dẫn hoặc chuẩn bị bản nháp dịch vụ.</p><button onClick={onCopilot}>Bắt đầu trao đổi</button></aside></div>}</section></main>;
+}
+
+function CopilotDrawer({ open, onClose, onSelectService }: { open: boolean; onClose: () => void; onSelectService: (type: string) => void }) {
+  const [messages, setMessages] = useState<ChatMessage[]>([{ role: "assistant", text: "Chào bạn. Tôi có thể tìm hướng dẫn, kiểm tra thông tin sẵn có hoặc giúp chuẩn bị form dịch vụ. Tôi không thể tự gửi yêu cầu thay bạn." }]);
+  const [pending, setPending] = useState(false);
+  async function send(text: string) { const query = text.trim(); if (!query || pending) return; setMessages(current => [...current, { role: "user", text: query }]); setPending(true); try { const response = await fetch("/api/copilot", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: query }) }); const data = await response.json() as { answer?: string; sources?: string[]; suggestedService?: string }; setMessages(current => [...current, { role: "assistant", text: data.answer ?? "Tôi chưa thể xử lý câu hỏi này.", sources: data.sources, suggestedService: data.suggestedService }]); } catch { setMessages(current => [...current, { role: "assistant", text: "Kết nối đang gián đoạn. Bạn vui lòng thử lại." }]); } finally { setPending(false); } }
+  return <><div className={`copilot-overlay ${open ? "open" : ""}`} onClick={onClose} aria-hidden={!open} /><aside className={`copilot-drawer ${open ? "open" : ""}`} aria-label="NIC AI Copilot" aria-hidden={!open}><div className="copilot-heading"><div><span>AI</span><div><strong>NIC Copilot</strong><small>Tra cứu và chuẩn bị, không tự gửi</small></div></div><button onClick={onClose} aria-label="Đóng Copilot">×</button></div><div className="copilot-thread" aria-live="polite">{messages.map((message, index) => <article key={index} className={`chat-bubble ${message.role}`}><strong>{message.role === "assistant" ? "NIC Copilot" : "Bạn"}</strong><p>{message.text}</p>{message.sources?.length ? <div className="chat-sources">{message.sources.map(source => <span key={source}>{source}</span>)}</div> : null}{message.suggestedService ? <button onClick={() => onSelectService(message.suggestedService!)}>Mở form để kiểm tra</button> : null}</article>)}{pending && <div className="chat-typing">NIC Copilot đang tìm thông tin...</div>}</div><div className="copilot-prompts">{["Phòng nào phù hợp cho 20 người?", "Quy trình đăng ký khách ra sao?", "Tôi cần hỗ trợ thiết bị"].map(prompt => <button key={prompt} onClick={() => send(prompt)}>{prompt}</button>)}</div><form className="copilot-composer" onSubmit={event => { event.preventDefault(); const input = new FormData(event.currentTarget).get("message")?.toString() ?? ""; void send(input); event.currentTarget.reset(); }}><label htmlFor="copilot-input">Bạn cần hỗ trợ gì?</label><div><input id="copilot-input" name="message" required placeholder="Nhập câu hỏi hoặc yêu cầu" /><button type="submit" disabled={pending}>Gửi</button></div></form></aside></>;
+}
+
+export function ConciergeWorkspace({ view = "home" }: { view?: PortalView }) {
   const [user, setUser] = useState<User | null>(null);
-  const [authChecked, setAuthChecked] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
   const [copilotOpen, setCopilotOpen] = useState(false);
-  const [activeNav, setActiveNav] = useState("Trang chủ");
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [draftMessage, setDraftMessage] = useState("");
   const [activeDraft, setActiveDraft] = useState<Draft | null>(null);
 
   useEffect(() => { fetch("/api/auth/session").then(async response => { if (response.ok) setUser((await response.json()).user); }).finally(() => setAuthChecked(true)); }, []);
+  useEffect(() => { if (authChecked && !user) window.location.replace("/auth"); }, [authChecked, user]);
   if (!authChecked) return <main className="auth-loading" aria-label="Đang kiểm tra phiên đăng nhập"><span>NIC</span><p>Đang chuẩn bị không gian của bạn...</p></main>;
-  if (!user) return <AuthScreen onAuthenticated={setUser} />;
+  if (!user) return <main className="auth-loading"><span>NIC</span><p>Đang chuyển đến trang đăng nhập...</p></main>;
 
   async function logout() { await fetch("/api/auth/logout", { method: "POST", headers: csrfHeaders() }); setUser(null); }
   async function revokeAllSessions() { if (!window.confirm("Đăng xuất tài khoản này trên tất cả thiết bị?")) return; await fetch("/api/auth/revoke-all", { method: "POST", headers: csrfHeaders() }); setUser(null); }
@@ -133,11 +167,12 @@ export function ConciergeWorkspace() {
     if (!activeDraft) return; const response = await fetch(`/api/service-drafts/${activeDraft.id}/submit`, { method: "POST", headers: csrfHeaders({ "Idempotency-Key": crypto.randomUUID() + crypto.randomUUID() }) }); const data = await response.json();
     if (!response.ok) return setDraftMessage("Chưa thể gửi. Bản nháp phải được xác nhận đúng phiên bản hiện tại."); setActiveDraft({ ...activeDraft, status: "submitted" }); setDraftMessage(`Đã gửi yêu cầu ${data.request.id}.`);
   }
+  if (view !== "home") return <><PortalSection view={view} user={user} onCopilot={() => setCopilotOpen(true)} /><CopilotDrawer open={copilotOpen} onClose={() => setCopilotOpen(false)} onSelectService={() => { window.location.href = "/portal"; }} /></>;
   return <main className="portal-shell">
     <a className="skip-link" href="#main-content">Đi đến nội dung chính</a>
     <header className="portal-header">
       <a className="brand-lockup" href="#main-content" aria-label="NIC Service Hub, trang chủ"><Image src="/nic-logo.png" alt="Vietnam National Innovation Center" width={142} height={54} priority /><span><strong>Service Hub</strong><small>Dịch vụ tại NIC</small></span></a>
-      <nav className="portal-nav" aria-label="Điều hướng chính">{["Trang chủ", "Yêu cầu của tôi", "Lịch & đặt chỗ", "Trung tâm trợ giúp"].map(item => <button key={item} className={activeNav === item ? "active" : ""} onClick={() => setActiveNav(item)}>{item}</button>)}</nav>
+      <nav className="portal-nav" aria-label="Điều hướng chính">{portalNav.map(item => <a key={item.view} className={item.view === "home" ? "active" : ""} href={item.href}>{item.label}</a>)}</nav>
       <div className="header-actions"><button className="notification-button" aria-label="Thông báo, có 2 thông báo mới">2</button><button className="profile-button" onClick={logout} title="Đăng xuất"><span>{user.fullName.split(" ").slice(-1)[0].slice(0,2).toUpperCase()}</span><span><strong>{user.fullName}</strong><small>{user.organization}</small></span></button></div>
     </header>
     <section id="main-content" className="portal-content">
@@ -152,14 +187,13 @@ export function ConciergeWorkspace() {
       </div>
       <footer className="scope-note"><span>i</span><p>Bạn đang sử dụng dịch vụ trong phạm vi <strong>{user.organization} tại NIC Hòa Lạc</strong>.</p><button onClick={revokeAllSessions}>Đăng xuất mọi thiết bị</button></footer>
     </section>
-    <div className={`copilot-overlay ${copilotOpen ? "open" : ""}`} onClick={() => setCopilotOpen(false)} aria-hidden={!copilotOpen} />
-    <aside className={`copilot-drawer ${copilotOpen ? "open" : ""}`} aria-label="NIC AI Copilot" aria-hidden={!copilotOpen}><div className="copilot-heading"><div><span>AI</span><div><strong>NIC Copilot</strong><small>Hỗ trợ theo quyền của bạn</small></div></div><button onClick={() => setCopilotOpen(false)} aria-label="Đóng Copilot">×</button></div><div className="copilot-message"><strong>NIC Copilot</strong><p>Tôi có thể tìm hướng dẫn, kiểm tra thông tin hoặc tạo bản nháp. Tôi không thể tự phê duyệt hay gửi yêu cầu.</p></div><div className="copilot-prompts"><button>Kiểm tra phòng trống</button><button>Tìm quy trình liên quan</button><button>Tạo bản nháp yêu cầu</button></div><form className="copilot-composer" onSubmit={event => event.preventDefault()}><label htmlFor="copilot-input">Bạn cần hỗ trợ gì?</label><div><input id="copilot-input" placeholder="Nhập câu hỏi hoặc yêu cầu" /><button type="submit">Gửi</button></div></form></aside>
+    <CopilotDrawer open={copilotOpen} onClose={() => setCopilotOpen(false)} onSelectService={type => { const service = services.find(item => item.type === type); if (service) { setSelectedService(service); setActiveDraft(null); setDraftMessage(""); } }} />
     {selectedService && <div className="service-modal-layer" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setSelectedService(null); }}><section className="service-modal" role="dialog" aria-modal="true" aria-labelledby="service-modal-title"><header><div><span>{activeDraft ? `BẢN NHÁP V${activeDraft.version}` : serviceForms[selectedService.type].eyebrow}</span><h2 id="service-modal-title">{selectedService.title}</h2></div><button onClick={() => setSelectedService(null)} aria-label="Đóng biểu mẫu">×</button></header><p>{selectedService.copy} Thông tin chỉ được gửi sau khi bạn xác nhận đúng phiên bản hiện tại.</p>{!activeDraft ? <form onSubmit={createDraft}><label>Tiêu đề<input name="title" required minLength={3} maxLength={120} placeholder="Tóm tắt nhu cầu của bạn" /></label><ServiceRegistrationFields service={selectedService} />{draftMessage && <p className="form-message" role="status">{draftMessage}</p>}<div><button type="button" onClick={() => setSelectedService(null)}>Để sau</button><button type="submit">Tiếp tục xác nhận</button></div></form> : <div className="draft-review"><div><span>Trạng thái</span><strong>{activeDraft.status === "submitted" ? "Đã gửi" : activeDraft.confirmedVersion === activeDraft.version ? "Đã xác nhận" : "Chờ xác nhận"}</strong></div>{draftMessage && <p className="form-message" role="status">{draftMessage}</p>}<div className="draft-actions"><button onClick={() => setSelectedService(null)}>Đóng</button>{activeDraft.status !== "submitted" && activeDraft.confirmedVersion !== activeDraft.version && <button onClick={confirmDraft}>Tôi đã kiểm tra, xác nhận</button>}{activeDraft.status !== "submitted" && activeDraft.confirmedVersion === activeDraft.version && <button className="submit-request" onClick={submitDraft}>Gửi yêu cầu chính thức</button>}</div></div>}</section></div>}
   </main>;
 }
 
-function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: User) => void }) {
-  const [mode, setMode] = useState<"login" | "register">("login"); const [error, setError] = useState(""); const [pending, setPending] = useState(false);
+export function AuthScreen({ onAuthenticated, initialMode = "login" }: { onAuthenticated: (user: User) => void; initialMode?: "login" | "register" }) {
+  const [mode, setMode] = useState<"login" | "register">(initialMode); const [error, setError] = useState(""); const [pending, setPending] = useState(false);
   async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); setPending(true); setError(""); try { const form = new FormData(event.currentTarget); const response = await fetch(`/api/auth/${mode}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(Object.fromEntries(form)) }); const data = await readApiPayload(response); if (!response.ok) return setError(data.error ?? "Không thể tiếp tục."); if (!data.user) return setError("Phản hồi từ máy chủ chưa đầy đủ. Vui lòng thử lại."); onAuthenticated(data.user); } catch { setError("Không thể kết nối máy chủ. Vui lòng thử lại."); } finally { setPending(false); } }
   return <main className="auth-shell"><section className="auth-story"><a className="brand-lockup" href="#"><Image src="/nic-logo.png" alt="Vietnam National Innovation Center" width={170} height={65} priority /><span><strong>Service Hub</strong><small>Dịch vụ tại NIC</small></span></a><div><span className="auth-eyebrow">CỔNG DỊCH VỤ NIC</span><h1>Kết nối nguồn lực. Thúc đẩy đổi mới.</h1><p>Đặt không gian, gửi yêu cầu hỗ trợ, đăng ký sự kiện và theo dõi tiến độ tại Trung tâm Đổi mới sáng tạo Quốc gia.</p></div><small>Vietnam National Innovation Center</small></section><section className="auth-panel"><div className="auth-card"><div><span>{mode === "login" ? "CHÀO MỪNG TRỞ LẠI" : "TẠO TÀI KHOẢN"}</span><h2>{mode === "login" ? "Đăng nhập" : "Bắt đầu với NIC"}</h2><p>{mode === "login" ? "Sử dụng tài khoản được cấp để tiếp tục." : "Tạo tài khoản thành viên doanh nghiệp."}</p></div><form onSubmit={submit}>{mode === "register" && <><label>Họ và tên<input name="fullName" required autoComplete="name" /></label><label>Doanh nghiệp<input name="organization" required autoComplete="organization" /></label></>}<label>Email<input name="email" type="email" required autoComplete="email" /></label><label>Mật khẩu<input name="password" type="password" required minLength={10} autoComplete={mode === "login" ? "current-password" : "new-password"} /></label>{error && <p className="auth-error" role="alert">{error}</p>}<button className="auth-submit" disabled={pending}>{pending ? "Đang xử lý..." : mode === "login" ? "Đăng nhập" : "Tạo tài khoản"}</button></form>{mode === "login" && <aside className="demo-account"><strong>Tài khoản kiểm thử</strong><span>thanh@demo.nic.vn</span><span>Mật khẩu: Demo@12345</span></aside>}<button className="auth-switch" onClick={() => { setMode(mode === "login" ? "register" : "login"); setError(""); }}>{mode === "login" ? "Chưa có tài khoản? Đăng ký" : "Đã có tài khoản? Đăng nhập"}</button></div></section></main>;
 }

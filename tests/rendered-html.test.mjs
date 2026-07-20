@@ -8,13 +8,14 @@ async function render() {
   return worker.fetch(new Request("http://localhost/", { headers: { accept: "text/html" } }), { ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) } }, { waitUntil() {}, passThroughOnException() {} });
 }
 
-test("renders the NIC end-user authentication entry", async () => {
+test("renders the public NIC Service Hub home", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   const html = await response.text();
   assert.match(html, /Service Hub/);
-  assert.match(html, /Đăng nhập/);
-  assert.match(html, /thanh@demo.nic.vn/);
+  assert.match(html, /Mọi dịch vụ NIC/);
+  assert.match(html, /href="\/auth"/);
+  assert.match(html, /href="\/auth\?mode=register"/);
   assert.doesNotMatch(html, /codex-preview/);
   assert.doesNotMatch(html, /file:\/\/\//);
   assert.doesNotMatch(html, /D:\/Proj\/NIC-AI/);

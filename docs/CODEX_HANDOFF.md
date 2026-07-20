@@ -70,6 +70,16 @@ Máy mới cần tạo `.env.local` từ `.env.example`; không sao chép secret
 
 ## Nhật ký bàn giao
 
+### 2026-07-20 - Trang chủ công khai, portal routes và Copilot hội thoại
+
+- Route `/` trở thành trang chủ công khai mang nhận diện NIC, giới thiệu dịch vụ và quy trình sử dụng.
+- Nút Đăng nhập và Đăng ký mới chuyển đến `/auth`; sau xác thực thành công người dùng được đưa vào `/portal`.
+- Thêm các trang điều hướng thật: `/portal/requests`, `/portal/bookings`, `/portal/help`; mọi trang portal kiểm tra session và chuyển người chưa đăng nhập về `/auth`.
+- Trang Yêu cầu hiển thị danh sách/trạng thái; trang Đặt chỗ giới thiệu danh mục không gian và availability mẫu; trang Trợ giúp có thư viện hướng dẫn và lối vào Copilot.
+- NIC Copilot hỗ trợ hội thoại nhiều lượt, prompt gợi ý, nguồn tham chiếu và mở đúng form dịch vụ để người dùng kiểm tra.
+- Endpoint `/api/copilot` yêu cầu session và chỉ trả lời/đề xuất form; không có capability submit hoặc ghi trực tiếp request.
+- Việc tiếp theo: thay availability mẫu bằng schema booking và transaction chống trùng; sau đó nối Copilot vào retrieval có citation thật.
+
 ### 2026-07-20 - Form đăng ký chuyên biệt cho dịch vụ thường dùng
 
 - Bốn dịch vụ thường dùng đều mở form đăng ký riêng thay vì chỉ dùng một ô mô tả chung.

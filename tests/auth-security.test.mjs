@@ -67,3 +67,18 @@ test("common services expose dedicated registration fields", async () => {
   assert.match(workspace, /ServiceRegistrationFields service=\{selectedService\}/);
   assert.match(workspace, /structuredDetails\.join\("\\n"\)/);
 });
+
+test("public home routes authentication and portal navigation explicitly", async () => {
+  const home = await readFile(new URL("../app/components/PublicHome.tsx", import.meta.url), "utf8");
+  const portal = await readFile(new URL("../app/components/ConciergeWorkspace.tsx", import.meta.url), "utf8");
+  assert.match(home, /href="\/auth"/);
+  assert.match(home, /href="\/auth\?mode=register"/);
+  for (const route of ["/portal/requests", "/portal/bookings", "/portal/help"]) assert.match(portal, new RegExp(route));
+});
+
+test("Copilot remains authenticated and has no submit capability", async () => {
+  const route = await readFile(new URL("../app/api/copilot/route.ts", import.meta.url), "utf8");
+  assert.match(route, /currentUser\(request\)/);
+  assert.match(route, /suggestedService/);
+  assert.doesNotMatch(route, /submit_request|service_requests|INSERT INTO/);
+});

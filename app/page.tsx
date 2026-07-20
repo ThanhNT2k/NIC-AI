@@ -1,5 +1,5 @@
-import { ConciergeWorkspace } from "./components/ConciergeWorkspace";
+import { PublicHome } from "./components/PublicHome";
 
 export default function Home() {
-  return <ConciergeWorkspace />;
+  return <PublicHome />;
 }
