@@ -1,6 +1,6 @@
 # Codex handoff — NIC Operations ERP
 
-Cập nhật gần nhất: 2026-07-20
+Cập nhật gần nhất: 2026-07-21
 
 File này giúp Codex tiếp tục công việc trên máy hoặc task mới mà không cần người dùng mô tả lại. Hãy cập nhật file sau mỗi thay đổi đáng kể; chỉ ghi trạng thái có thể kiểm chứng từ repository.
 
@@ -69,6 +69,14 @@ npm audit --omit=dev
 Máy mới cần tạo `.env.local` từ `.env.example`; không sao chép secret vào Git hoặc file handoff.
 
 ## Nhật ký bàn giao
+
+### 2026-07-21 - Mở rộng README theo chuẩn hồ sơ dự án
+
+- Viết lại `README.md` thành tài liệu tổng quan đầy đủ gồm bài toán, giải pháp, phạm vi sản phẩm, ma trận đáp ứng đề bài, phân quyền, kiến trúc, dữ liệu, AI Copilot, cài đặt local, kiểm thử, triển khai, bảo mật, giới hạn và roadmap.
+- Ma trận yêu cầu phân biệt rõ `Đã có`, `Một phần` và `Chưa có`; không mô tả các module booking availability, work order, provider coordination, visitor QR/check-in hay RAG thật như đã hoàn thành.
+- Bổ sung sơ đồ Mermaid cho kiến trúc, request routing và vòng đời request; liên kết đến demo private, tài liệu kỹ thuật và các migration hiện có.
+- Baseline kiểm thử được ghi đúng theo lần kiểm chứng gần nhất: 17 test đạt; thay đổi này chỉ tác động tài liệu, không thay đổi runtime.
+- Việc tiếp theo: triển khai P1 booking availability/anti-overlap hoặc hàng đợi vận hành theo phòng ban, rồi cập nhật lại ma trận yêu cầu và bằng chứng đánh giá.
 
 ### 2026-07-21 - ERP capability model, request routing và typography dễ đọc
 
