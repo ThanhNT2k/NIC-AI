@@ -70,6 +70,24 @@ Máy mới cần tạo `.env.local` từ `.env.example`; không sao chép secret
 
 ## Nhật ký bàn giao
 
+### 2026-07-20 - Auth D1 và bản nháp dịch vụ end-user
+
+- Thêm đăng nhập, đăng ký, đăng xuất và kiểm tra session bằng cookie HttpOnly.
+- Password dùng PBKDF2-SHA256, salt ngẫu nhiên và 210.000 vòng; session token chỉ lưu dạng SHA-256.
+- Thêm tài khoản seed `thanh@demo.nic.vn` để kiểm thử; mật khẩu demo được hiển thị trên màn hình đăng nhập, không lưu rõ trong DB.
+- Bốn dịch vụ thường dùng đã mở biểu mẫu và lưu `service_drafts` theo owner lấy từ session.
+- Thêm khóa tạm 15 phút sau 5 lần đăng nhập sai và test kiểm tra guardrail lưu mật khẩu/session.
+- Thêm `docs/NEXT_FEATURES.md` với backlog P0-P2 và tiêu chí MVP.
+- Việc tiếp theo: làm draft confirm/submit transaction, RBAC/RLS và dữ liệu nghiệp vụ thật cho booking/request.
+
+### 2026-07-20 - Chuyển prototype sang giao diện end-user
+
+- Thay dashboard quản lý đa vai trò bằng NIC Service Hub dành cho thành viên doanh nghiệp.
+- Luồng chính gồm tìm dịch vụ, thao tác nhanh, yêu cầu gần đây, lịch sắp tới và NIC Copilot.
+- Giữ guardrail: Copilot chỉ tìm thông tin và chuẩn bị bản nháp, không tự phê duyệt hoặc gửi yêu cầu.
+- Cập nhật server-render test theo nội dung trang end-user mới.
+- Việc tiếp theo: kết nối action vào route và dữ liệu thật sau khi authentication, permission model và API draft ổn định.
+
 ### 2026-07-20 — Tạo bộ nhớ repository cho Codex
 
 - Thêm `AGENTS.md` làm hướng dẫn tự nạp cho mọi task trong repository.

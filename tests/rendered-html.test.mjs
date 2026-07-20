@@ -8,12 +8,12 @@ async function render() {
   return worker.fetch(new Request("http://localhost/", { headers: { accept: "text/html" } }), { ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) } }, { waitUntil() {}, passThroughOnException() {} });
 }
 
-test("renders the NIC ERP dashboard and Copilot guardrail", async () => {
+test("renders the NIC end-user authentication entry", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   const html = await response.text();
-  assert.match(html, /NIC Operations ERP/);
-  assert.match(html, /Tổng quan vận hành NIC/);
-  assert.match(html, /Tôi không thể tự phê duyệt hay gửi yêu cầu/);
+  assert.match(html, /Service Hub/);
+  assert.match(html, /Đăng nhập/);
+  assert.match(html, /thanh@demo.nic.vn/);
   assert.doesNotMatch(html, /codex-preview/);
 });

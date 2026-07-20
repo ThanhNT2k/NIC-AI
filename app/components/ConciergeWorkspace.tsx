@@ -1,233 +1,72 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
-type Role = "executive" | "facility" | "event" | "tenant";
+type User = { id: string; email: string; fullName: string; organization: string; role: string };
+type Service = { code: string; type: string; title: string; copy: string; action: string };
 
-type RoleView = {
-  label: string;
-  position: string;
-  greeting: string;
-  description: string;
-  navigation: string[];
-  metrics: { label: string; value: string; delta: string; tone?: "warning" }[];
-  queueTitle: string;
-  queue: { title: string; meta: string; status: string; owner: string }[];
-};
+const services: Service[] = [
+  { code: "01", type: "space_booking", title: "Đặt phòng & không gian", copy: "Tìm phòng phù hợp và gửi yêu cầu đặt chỗ.", action: "Tìm không gian" },
+  { code: "02", type: "support", title: "Yêu cầu hỗ trợ", copy: "Báo sự cố, yêu cầu thiết bị hoặc dịch vụ tại NIC.", action: "Tạo yêu cầu" },
+  { code: "03", type: "event_registration", title: "Đăng ký sự kiện", copy: "Chuẩn bị thông tin cho sự kiện và khách tham dự.", action: "Bắt đầu đăng ký" },
+  { code: "04", type: "access_card", title: "Thẻ & quyền ra vào", copy: "Đăng ký thẻ mới, gia hạn hoặc báo mất thẻ.", action: "Quản lý thẻ" },
+];
 
-const views: Record<Role, RoleView> = {
-  executive: {
-    label: "Ban lãnh đạo",
-    position: "Giám đốc vận hành",
-    greeting: "Tổng quan vận hành NIC",
-    description: "Theo dõi công suất, SLA và các quyết định cần xử lý trong hôm nay.",
-    navigation: ["Tổng quan", "Phê duyệt", "Báo cáo", "Doanh nghiệp", "Cơ sở", "Sự kiện"],
-    metrics: [
-      { label: "Công suất không gian", value: "74%", delta: "+6% so với tuần trước" },
-      { label: "Sự kiện tuần này", value: "18", delta: "4 sự kiện cần phối hợp" },
-      { label: "Yêu cầu trong SLA", value: "91%", delta: "Mục tiêu nội bộ 95%", tone: "warning" },
-      { label: "Việc cần phê duyệt", value: "07", delta: "2 việc ưu tiên cao", tone: "warning" },
-    ],
-    queueTitle: "Quyết định cần xử lý",
-    queue: [
-      { title: "Phê duyệt kế hoạch Vietnam Innovation Forum", meta: "Sự kiện • 25/07/2026", status: "Ưu tiên cao", owner: "Phòng Sự kiện" },
-      { title: "Điều chỉnh ngân sách bảo trì hệ thống HVAC", meta: "Cơ sở vật chất • Tòa nhà A", status: "Chờ duyệt", owner: "Nguyễn Minh Anh" },
-      { title: "Gia hạn quyền truy cập nhà cung cấp An Phát", meta: "Quản trị • Hết hạn sau 2 ngày", status: "Cần xem xét", owner: "IT Security" },
-    ],
-  },
-  facility: {
-    label: "Cơ sở vật chất",
-    position: "Facility Manager",
-    greeting: "Trung tâm điều phối cơ sở",
-    description: "Kiểm soát không gian, tài sản, bảo trì và hàng đợi công việc của đội ngũ.",
-    navigation: ["Tổng quan", "Không gian", "Tài sản", "Bảo trì", "Booking", "Yêu cầu", "Báo cáo"],
-    metrics: [
-      { label: "Không gian sẵn sàng", value: "42/48", delta: "3 phòng đang được sử dụng" },
-      { label: "Work order đang mở", value: "16", delta: "5 việc đến hạn hôm nay" },
-      { label: "Tài sản cần bảo trì", value: "09", delta: "2 hạng mục quá hạn", tone: "warning" },
-      { label: "SLA xử lý", value: "94%", delta: "+3% trong 30 ngày" },
-    ],
-    queueTitle: "Hàng đợi cơ sở vật chất",
-    queue: [
-      { title: "Kiểm tra điều hòa phòng hội thảo 2.1", meta: "REQ-2026-0718 • Còn 01:42 SLA", status: "Đang xử lý", owner: "Trần Quốc Huy" },
-      { title: "Chuẩn bị thiết bị cho workshop AI", meta: "EVT-2026-0251 • 25/07, 14:00", status: "Đã phân công", owner: "Đội AV" },
-      { title: "Bảo trì định kỳ máy phát điện", meta: "MNT-2026-0088 • Tòa nhà B", status: "Đến hạn", owner: "Lê Hải Nam" },
-    ],
-  },
-  event: {
-    label: "Sự kiện",
-    position: "Event Manager",
-    greeting: "Điều hành sự kiện",
-    description: "Theo dõi lịch, nguồn lực, xung đột booking và các mốc chuẩn bị quan trọng.",
-    navigation: ["Tổng quan", "Sự kiện", "Lịch", "Booking", "Khách mời", "Dịch vụ", "Yêu cầu"],
-    metrics: [
-      { label: "Sự kiện sắp tới", value: "12", delta: "Trong 14 ngày tiếp theo" },
-      { label: "Booking đã xác nhận", value: "28", delta: "6 booking hôm nay" },
-      { label: "Xung đột cần xử lý", value: "03", delta: "1 xung đột ưu tiên cao", tone: "warning" },
-      { label: "Checklist hoàn tất", value: "86%", delta: "18 mục chưa hoàn thành" },
-    ],
-    queueTitle: "Sự kiện cần chú ý",
-    queue: [
-      { title: "Workshop đổi mới sáng tạo", meta: "25/07, 14:00 • 30 khách", status: "Đang chuẩn bị", owner: "Phạm Thu Hà" },
-      { title: "Vietnam Innovation Forum", meta: "28/07, 08:30 • 240 khách", status: "Chờ phê duyệt", owner: "Nguyễn Thùy Linh" },
-      { title: "Đón đoàn doanh nghiệp Nhật Bản", meta: "29/07, 10:00 • 18 khách", status: "Thiếu thông tin", owner: "Trần Anh Tuấn" },
-    ],
-  },
-  tenant: {
-    label: "Doanh nghiệp tại NIC",
-    position: "Tenant Admin",
-    greeting: "Không gian doanh nghiệp",
-    description: "Quản lý thành viên, booking và các yêu cầu vận hành của doanh nghiệp bạn.",
-    navigation: ["Trang chủ", "Doanh nghiệp", "Thành viên", "Yêu cầu", "Booking", "Sự kiện", "Tri thức"],
-    metrics: [
-      { label: "Yêu cầu đang mở", value: "05", delta: "2 yêu cầu đang được xử lý" },
-      { label: "Booking sắp tới", value: "04", delta: "Booking gần nhất vào 25/07" },
-      { label: "Thành viên hoạt động", value: "18", delta: "2 lời mời đang chờ" },
-      { label: "Việc cần bổ sung", value: "02", delta: "Cần phản hồi trước 17:00", tone: "warning" },
-    ],
-    queueTitle: "Yêu cầu của doanh nghiệp",
-    queue: [
-      { title: "Workshop đổi mới sáng tạo", meta: "REQ-2026-0712 • Cập nhật 12 phút trước", status: "Đang xử lý", owner: "NIC Event Team" },
-      { title: "Cấp thẻ ra vào cho thành viên mới", meta: "REQ-2026-0709 • 3 thành viên", status: "Cần bổ sung", owner: "Nguyễn Thanh" },
-      { title: "Đăng ký sử dụng phòng họp 3.2", meta: "REQ-2026-0685 • 29/07, 09:00", status: "Đã xác nhận", owner: "Facility Desk" },
-    ],
-  },
-};
-
-const schedule = [
-  { time: "08:30", title: "Họp điều phối vận hành", place: "Phòng 2.3", type: "Nội bộ" },
-  { time: "10:00", title: "Đón đoàn TechX Vietnam", place: "Sảnh Innovation", type: "Tiếp khách" },
-  { time: "14:00", title: "Workshop đổi mới sáng tạo", place: "Hội thảo 2.1", type: "Sự kiện" },
-  { time: "16:30", title: "Kiểm tra an toàn cuối ngày", place: "Tòa nhà A", type: "Cơ sở" },
+const requests = [
+  { id: "REQ-0712", title: "Hỗ trợ thiết bị cho workshop", status: "Đang xử lý", meta: "Cập nhật 12 phút trước", step: 2 },
+  { id: "BKG-0685", title: "Phòng họp 3.2", status: "Đã xác nhận", meta: "29/07/2026, 09:00", step: 3 },
+  { id: "REQ-0709", title: "Cấp thẻ cho thành viên mới", status: "Cần bổ sung", meta: "Phản hồi trước 17:00 hôm nay", step: 1 },
 ];
 
 export function ConciergeWorkspace() {
-  const [role, setRole] = useState<Role>("executive");
+  const [user, setUser] = useState<User | null>(null);
+  const [authChecked, setAuthChecked] = useState(true);
   const [copilotOpen, setCopilotOpen] = useState(false);
-  const [activeNav, setActiveNav] = useState("Tổng quan");
-  const view = views[role];
-  const initials = useMemo(() => (role === "tenant" ? "NT" : "MA"), [role]);
+  const [activeNav, setActiveNav] = useState("Trang chủ");
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [draftMessage, setDraftMessage] = useState("");
 
-  function changeRole(nextRole: Role) {
-    setRole(nextRole);
-    setActiveNav(views[nextRole].navigation[0]);
+  useEffect(() => { fetch("/api/auth/session").then(async response => { if (response.ok) setUser((await response.json()).user); }).finally(() => setAuthChecked(true)); }, []);
+  if (!authChecked) return <main className="auth-loading" aria-label="Đang kiểm tra phiên đăng nhập"><span>NIC</span><p>Đang chuẩn bị không gian của bạn...</p></main>;
+  if (!user) return <AuthScreen onAuthenticated={setUser} />;
+
+  async function logout() { await fetch("/api/auth/logout", { method: "POST" }); setUser(null); }
+  async function createDraft(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); if (!selectedService) return;
+    const form = new FormData(event.currentTarget);
+    const response = await fetch("/api/service-drafts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ serviceType: selectedService.type, title: form.get("title"), details: form.get("details") }) });
+    const data = await response.json();
+    if (!response.ok) return setDraftMessage(data.error ?? "Không thể lưu bản nháp.");
+    setDraftMessage("Đã lưu bản nháp. Bạn có thể kiểm tra lại trước khi xác nhận và gửi.");
+    event.currentTarget.reset();
   }
-
-  return (
-    <main className="erp-shell">
-      <a className="skip-link" href="#main-content">Đi đến nội dung chính</a>
-      <aside className="erp-sidebar" aria-label="Điều hướng ERP">
-        <div className="brand-lockup">
-          <span className="brand-mark">NIC</span>
-          <span><strong>Operations</strong><small>Enterprise Resource Planning</small></span>
-        </div>
-
-        <div className="context-block">
-          <span>Không gian làm việc</span>
-          <strong>NIC Hòa Lạc</strong>
-          <small>{view.label}</small>
-        </div>
-
-        <nav className="erp-nav" aria-label="Phân hệ được cấp quyền">
-          <span className="nav-heading">Phân hệ</span>
-          {view.navigation.map((item, index) => (
-            <button key={item} className={activeNav === item ? "active" : ""} onClick={() => setActiveNav(item)}>
-              <span className="nav-glyph" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
-              {item}
-            </button>
-          ))}
-        </nav>
-
-        <div className="sidebar-foot">
-          <button className="help-button"><span aria-hidden="true">?</span>Trung tâm hỗ trợ</button>
-          <div className="identity-card">
-            <span className="avatar">{initials}</span>
-            <span><strong>{role === "tenant" ? "Nguyễn Thanh" : "Minh Anh"}</strong><small>{view.position}</small></span>
-            <button aria-label="Mở menu tài khoản">•••</button>
-          </div>
-        </div>
-      </aside>
-
-      <section className="erp-main" id="main-content">
-        <header className="topbar">
-          <div className="breadcrumb"><span>NIC Operations</span><b>/</b><strong>{activeNav}</strong></div>
-          <div className="top-actions">
-            <label className="global-search"><span aria-hidden="true">⌕</span><input aria-label="Tìm kiếm toàn hệ thống" placeholder="Tìm kiếm trong phạm vi được cấp quyền" /></label>
-            <button className="icon-button" aria-label="Thông báo"><span aria-hidden="true">!</span><i>3</i></button>
-            <button className="copilot-button" onClick={() => setCopilotOpen(true)}><span aria-hidden="true">AI</span>Copilot</button>
-          </div>
-        </header>
-
-        <div className="dashboard">
-          <section className="dashboard-intro">
-            <div>
-              <p className="date-copy">Thứ Hai, 20 tháng 7 năm 2026</p>
-              <h1>{view.greeting}</h1>
-              <p>{view.description}</p>
-            </div>
-            <label className="role-switcher">
-              <span>Xem layout theo vai trò</span>
-              <select value={role} onChange={(event) => changeRole(event.target.value as Role)}>
-                <option value="executive">Ban lãnh đạo</option>
-                <option value="facility">Facility Manager</option>
-                <option value="event">Event Manager</option>
-                <option value="tenant">Tenant Admin</option>
-              </select>
-              <small>Mô phỏng UI, không thay thế authorization backend</small>
-            </label>
-          </section>
-
-          <section className="metrics-grid" aria-label="Chỉ số vận hành">
-            {view.metrics.map((metric) => (
-              <article className="metric" key={metric.label}>
-                <span>{metric.label}</span>
-                <strong>{metric.value}</strong>
-                <small className={metric.tone === "warning" ? "warning" : ""}>{metric.delta}</small>
-              </article>
-            ))}
-          </section>
-
-          <div className="operations-grid">
-            <section className="work-panel">
-              <div className="panel-heading"><div><h2>{view.queueTitle}</h2><p>Dữ liệu được giới hạn theo role và phạm vi hiện tại.</p></div><button>Xem tất cả</button></div>
-              <div className="queue-table" role="table" aria-label={view.queueTitle}>
-                <div className="queue-row queue-header" role="row"><span>Nội dung</span><span>Phụ trách</span><span>Trạng thái</span><span /></div>
-                {view.queue.map((item) => (
-                  <div className="queue-row" role="row" key={item.title}>
-                    <span><strong>{item.title}</strong><small>{item.meta}</small></span>
-                    <span>{item.owner}</span>
-                    <span><b className="status-badge">{item.status}</b></span>
-                    <button aria-label={`Mở ${item.title}`}>Mở</button>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            <aside className="schedule-panel">
-              <div className="panel-heading"><div><h2>Lịch vận hành hôm nay</h2><p>4 hoạt động đã được xác nhận.</p></div><button aria-label="Mở lịch đầy đủ">Lịch</button></div>
-              <div className="schedule-list">
-                {schedule.map((item) => <article key={`${item.time}-${item.title}`}><time>{item.time}</time><span><strong>{item.title}</strong><small>{item.place} / {item.type}</small></span></article>)}
-              </div>
-              <button className="secondary-action">Tạo lịch công việc</button>
-            </aside>
-          </div>
-
-          <section className="access-notice">
-            <span className="notice-mark" aria-hidden="true">i</span>
-            <div><strong>Phạm vi truy cập đang hoạt động</strong><p>Bạn đang xem dữ liệu thuộc {view.label} tại NIC Hòa Lạc. Mọi thao tác quan trọng được ghi audit.</p></div>
-            <button>Xem quyền của tôi</button>
-          </section>
-        </div>
+  return <main className="portal-shell">
+    <a className="skip-link" href="#main-content">Đi đến nội dung chính</a>
+    <header className="portal-header">
+      <a className="brand-lockup" href="#main-content" aria-label="NIC Service Hub, trang chủ"><span className="brand-mark">NIC</span><span><strong>Service Hub</strong><small>Dịch vụ tại NIC</small></span></a>
+      <nav className="portal-nav" aria-label="Điều hướng chính">{["Trang chủ", "Yêu cầu của tôi", "Lịch & đặt chỗ", "Trung tâm trợ giúp"].map(item => <button key={item} className={activeNav === item ? "active" : ""} onClick={() => setActiveNav(item)}>{item}</button>)}</nav>
+      <div className="header-actions"><button className="notification-button" aria-label="Thông báo, có 2 thông báo mới">2</button><button className="profile-button" onClick={logout} title="Đăng xuất"><span>{user.fullName.split(" ").slice(-1)[0].slice(0,2).toUpperCase()}</span><span><strong>{user.fullName}</strong><small>{user.organization}</small></span></button></div>
+    </header>
+    <section id="main-content" className="portal-content">
+      <section className="welcome-grid">
+        <div className="welcome-copy"><p className="date-label">Thứ Hai, 20 tháng 7</p><h1>Chào buổi sáng, {user.fullName.split(" ").slice(-1)[0]}.</h1><p>Bạn cần NIC hỗ trợ việc gì hôm nay?</p><label className="service-search"><span aria-hidden="true">⌕</span><input aria-label="Tìm dịch vụ hoặc hướng dẫn" placeholder="Tìm dịch vụ, không gian hoặc hướng dẫn..." /><kbd>Ctrl K</kbd></label></div>
+        <aside className="next-event"><div className="event-date"><strong>25</strong><span>THÁNG 7</span></div><div><span className="event-label">Lịch sắp tới</span><h2>Workshop đổi mới sáng tạo</h2><p>14:00 - 16:30, Phòng hội thảo 2.1</p></div><button aria-label="Xem chi tiết Workshop đổi mới sáng tạo">→</button></aside>
       </section>
+      <section className="services-section" aria-labelledby="services-title"><div className="section-heading"><div><h2 id="services-title">Dịch vụ thường dùng</h2><p>Bắt đầu nhanh với các tác vụ phổ biến tại NIC.</p></div><button>Xem tất cả dịch vụ</button></div><div className="service-grid">{services.map(service => <article className="service-card" key={service.code}><span className="service-code">{service.code}</span><div><h3>{service.title}</h3><p>{service.copy}</p></div><button onClick={() => { setSelectedService(service); setDraftMessage(""); }}>{service.action}<span aria-hidden="true">→</span></button></article>)}</div></section>
+      <div className="activity-grid">
+        <section className="requests-panel" aria-labelledby="requests-title"><div className="section-heading"><div><h2 id="requests-title">Yêu cầu gần đây</h2><p>Theo dõi tiến độ những việc bạn đã gửi.</p></div><button>Xem tất cả</button></div><div className="request-list">{requests.map(request => <article className="request-item" key={request.id}><div className="request-main"><span>{request.id}</span><strong>{request.title}</strong><small>{request.meta}</small></div><div className="request-progress" aria-label={`Tiến độ ${request.step} trên 3 bước`}>{[1,2,3].map(step => <i key={step} className={step <= request.step ? "done" : ""} />)}</div><b className={`request-status step-${request.step}`}>{request.status}</b><button aria-label={`Mở ${request.title}`}>→</button></article>)}</div></section>
+        <aside className="help-panel"><span className="ai-mark">AI</span><div><h2>Hỏi NIC Copilot</h2><p>Tìm chính sách, kiểm tra thông tin hoặc chuẩn bị một bản nháp yêu cầu.</p></div><div className="prompt-list"><button>Phòng nào còn trống chiều nay?</button><button>Quy trình đăng ký khách ra sao?</button></div><button className="primary-action" onClick={() => setCopilotOpen(true)}>Bắt đầu trao đổi <span aria-hidden="true">→</span></button><small>Copilot chỉ chuẩn bị. Bạn luôn là người kiểm tra và quyết định gửi.</small></aside>
+      </div>
+      <footer className="scope-note"><span>i</span><p>Bạn đang sử dụng dịch vụ trong phạm vi <strong>Innovate Vietnam tại NIC Hòa Lạc</strong>.</p><button>Xem quyền của tôi</button></footer>
+    </section>
+    <div className={`copilot-overlay ${copilotOpen ? "open" : ""}`} onClick={() => setCopilotOpen(false)} aria-hidden={!copilotOpen} />
+    <aside className={`copilot-drawer ${copilotOpen ? "open" : ""}`} aria-label="NIC AI Copilot" aria-hidden={!copilotOpen}><div className="copilot-heading"><div><span>AI</span><div><strong>NIC Copilot</strong><small>Hỗ trợ theo quyền của bạn</small></div></div><button onClick={() => setCopilotOpen(false)} aria-label="Đóng Copilot">×</button></div><div className="copilot-message"><strong>NIC Copilot</strong><p>Tôi có thể tìm hướng dẫn, kiểm tra thông tin hoặc tạo bản nháp. Tôi không thể tự phê duyệt hay gửi yêu cầu.</p></div><div className="copilot-prompts"><button>Kiểm tra phòng trống</button><button>Tìm quy trình liên quan</button><button>Tạo bản nháp yêu cầu</button></div><form className="copilot-composer" onSubmit={event => event.preventDefault()}><label htmlFor="copilot-input">Bạn cần hỗ trợ gì?</label><div><input id="copilot-input" placeholder="Nhập câu hỏi hoặc yêu cầu" /><button type="submit">Gửi</button></div></form></aside>
+    {selectedService && <div className="service-modal-layer" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setSelectedService(null); }}><section className="service-modal" role="dialog" aria-modal="true" aria-labelledby="service-modal-title"><header><div><span>BẢN NHÁP DỊCH VỤ</span><h2 id="service-modal-title">{selectedService.title}</h2></div><button onClick={() => setSelectedService(null)} aria-label="Đóng biểu mẫu">×</button></header><p>{selectedService.copy} Thông tin chỉ được lưu ở trạng thái bản nháp.</p><form onSubmit={createDraft}><label>Tiêu đề<input name="title" required minLength={3} maxLength={120} placeholder="Tóm tắt nhu cầu của bạn" /></label><label>Thông tin chi tiết<textarea name="details" required minLength={5} maxLength={2000} placeholder="Thời gian, địa điểm, số lượng hoặc thông tin cần hỗ trợ" /></label>{draftMessage && <p className="form-message" role="status">{draftMessage}</p>}<div><button type="button" onClick={() => setSelectedService(null)}>Để sau</button><button type="submit">Lưu bản nháp</button></div></form></section></div>}
+  </main>;
+}
 
-      <div className={`copilot-overlay ${copilotOpen ? "open" : ""}`} onClick={() => setCopilotOpen(false)} aria-hidden={!copilotOpen} />
-      <aside className={`copilot-drawer ${copilotOpen ? "open" : ""}`} aria-label="NIC AI Copilot" aria-hidden={!copilotOpen}>
-        <div className="copilot-heading"><div><span>AI</span><div><strong>NIC Copilot</strong><small>Hỗ trợ theo quyền của bạn</small></div></div><button onClick={() => setCopilotOpen(false)} aria-label="Đóng Copilot">×</button></div>
-        <div className="copilot-context"><strong>Ngữ cảnh hiện tại</strong><span>{view.label} / {activeNav}</span></div>
-        <div className="copilot-message"><strong>NIC Copilot</strong><p>Tôi có thể tóm tắt dữ liệu đang hiển thị, tìm quy trình hoặc tạo bản nháp. Tôi không thể tự phê duyệt hay gửi yêu cầu.</p></div>
-        <div className="copilot-prompts"><button>Tóm tắt việc ưu tiên</button><button>Tìm quy trình liên quan</button><button>Tạo bản nháp yêu cầu</button></div>
-        <form className="copilot-composer" onSubmit={(event) => event.preventDefault()}><label htmlFor="copilot-input">Trao đổi với Copilot</label><div><input id="copilot-input" placeholder="Nhập câu hỏi hoặc yêu cầu" /><button type="submit">Gửi</button></div></form>
-      </aside>
-    </main>
-  );
+function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: User) => void }) {
+  const [mode, setMode] = useState<"login" | "register">("login"); const [error, setError] = useState(""); const [pending, setPending] = useState(false);
+  async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); setPending(true); setError(""); const form = new FormData(event.currentTarget); const response = await fetch(`/api/auth/${mode}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(Object.fromEntries(form)) }); const data = await response.json(); setPending(false); if (!response.ok) return setError(data.error ?? "Không thể tiếp tục."); onAuthenticated(data.user); }
+  return <main className="auth-shell"><section className="auth-story"><a className="brand-lockup" href="#"><span className="brand-mark">NIC</span><span><strong>Service Hub</strong><small>Dịch vụ tại NIC</small></span></a><div><span className="auth-eyebrow">MỘT ĐIỂM ĐẾN</span><h1>Mọi dịch vụ tại NIC, trong một không gian.</h1><p>Đặt phòng, gửi yêu cầu hỗ trợ, đăng ký sự kiện và theo dõi tiến độ của bạn.</p></div><small>NIC Operations ERP</small></section><section className="auth-panel"><div className="auth-card"><div><span>{mode === "login" ? "CHÀO MỪNG TRỞ LẠI" : "TẠO TÀI KHOẢN"}</span><h2>{mode === "login" ? "Đăng nhập" : "Bắt đầu với NIC"}</h2><p>{mode === "login" ? "Sử dụng tài khoản được cấp để tiếp tục." : "Tạo tài khoản thành viên doanh nghiệp."}</p></div><form onSubmit={submit}>{mode === "register" && <><label>Họ và tên<input name="fullName" required autoComplete="name" /></label><label>Doanh nghiệp<input name="organization" required autoComplete="organization" /></label></>}<label>Email<input name="email" type="email" required autoComplete="email" /></label><label>Mật khẩu<input name="password" type="password" required minLength={10} autoComplete={mode === "login" ? "current-password" : "new-password"} /></label>{error && <p className="auth-error" role="alert">{error}</p>}<button className="auth-submit" disabled={pending}>{pending ? "Đang xử lý..." : mode === "login" ? "Đăng nhập" : "Tạo tài khoản"}</button></form>{mode === "login" && <aside className="demo-account"><strong>Tài khoản kiểm thử</strong><span>thanh@demo.nic.vn</span><span>Mật khẩu: Demo@12345</span></aside>}<button className="auth-switch" onClick={() => { setMode(mode === "login" ? "register" : "login"); setError(""); }}>{mode === "login" ? "Chưa có tài khoản? Đăng ký" : "Đã có tài khoản? Đăng nhập"}</button></div></section></main>;
 }
