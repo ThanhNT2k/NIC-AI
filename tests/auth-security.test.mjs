@@ -27,3 +27,22 @@ test("session cookie is server-only and service drafts derive ownership from ses
   assert.match(drafts, /currentUser\(request\)/);
   assert.doesNotMatch(drafts, /body\?\.ownerId/);
 });
+
+test("submit requires current confirmation, ownership and idempotency", async () => {
+  const submit = await readFile(new URL("../app/api/service-drafts/[id]/submit/route.ts", import.meta.url), "utf8");
+  const confirm = await readFile(new URL("../app/api/service-drafts/[id]/confirm/route.ts", import.meta.url), "utf8");
+  const update = await readFile(new URL("../app/api/service-drafts/[id]/route.ts", import.meta.url), "utf8");
+  assert.match(submit, /idempotency-key/);
+  assert.match(submit, /confirmed_version = d\.version/);
+  assert.match(submit, /d\.owner_id = \?/);
+  assert.match(confirm, /owner_id = \?/);
+  assert.match(update, /confirmed_version = NULL/);
+  assert.match(update, /version = version \+ 1/);
+});
+
+test("official request reads remain tenant and owner scoped", async () => {
+  const requests = await readFile(new URL("../app/api/requests/route.ts", import.meta.url), "utf8");
+  assert.match(requests, /owner_id = \?/);
+  assert.match(requests, /organization = \?/);
+  assert.match(requests, /user\.organization/);
+});

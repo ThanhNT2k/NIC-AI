@@ -1,4 +1,4 @@
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const users = sqliteTable("users", {
   id: text("id").primaryKey(),
@@ -33,4 +33,27 @@ export const serviceDrafts = sqliteTable("service_drafts", {
   confirmedVersion: integer("confirmed_version"),
   createdAt: integer("created_at").notNull(),
   updatedAt: integer("updated_at").notNull(),
+});
+
+export const serviceRequests = sqliteTable("service_requests", {
+  id: text("id").primaryKey(),
+  draftId: text("draft_id").notNull().unique().references(() => serviceDrafts.id),
+  ownerId: text("owner_id").notNull().references(() => users.id),
+  organization: text("organization").notNull(),
+  serviceType: text("service_type").notNull(),
+  title: text("title").notNull(),
+  details: text("details").notNull(),
+  status: text("status").notNull().default("submitted"),
+  idempotencyKey: text("idempotency_key").notNull(),
+  createdAt: integer("created_at").notNull(),
+}, (table) => [uniqueIndex("service_requests_owner_idempotency_idx").on(table.ownerId, table.idempotencyKey)]);
+
+export const auditLogs = sqliteTable("audit_logs", {
+  id: text("id").primaryKey(),
+  actorId: text("actor_id").notNull().references(() => users.id),
+  action: text("action").notNull(),
+  entityType: text("entity_type").notNull(),
+  entityId: text("entity_id").notNull(),
+  metadata: text("metadata").notNull().default("{}"),
+  createdAt: integer("created_at").notNull(),
 });

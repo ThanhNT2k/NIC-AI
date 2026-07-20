@@ -70,6 +70,14 @@ Máy mới cần tạo `.env.local` từ `.env.example`; không sao chép secret
 
 ## Nhật ký bàn giao
 
+### 2026-07-20 - Đồng bộ nhận diện NIC và hoàn thiện submit guardrail
+
+- Đối chiếu `nic.gov.vn`, dùng logo/ảnh kiến trúc NIC công khai, bảng màu xanh chàm và cam đỏ của thương hiệu.
+- Thêm sửa draft có optimistic version, tự vô hiệu hóa xác nhận cũ.
+- Thêm confirm đúng version và submit bằng D1 batch với ownership, confirmation và idempotency key.
+- Thêm `service_requests`, `audit_logs`, API danh sách request theo owner + organization và migration tương ứng.
+- Việc tiếp theo theo P0: CSRF token, rate limit phân tán, revoke-all-sessions và test tích hợp D1 giữa hai tenant; sau đó triển khai availability/anti-overlap cho booking.
+
 ### 2026-07-20 - Auth D1 và bản nháp dịch vụ end-user
 
 - Thêm đăng nhập, đăng ký, đăng xuất và kiểm tra session bằng cookie HttpOnly.

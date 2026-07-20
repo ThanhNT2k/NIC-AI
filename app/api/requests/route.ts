@@ -1,0 +1,2 @@
+import { currentUser, database } from "@/lib/d1-auth";
+export async function GET(request: Request) { const user = await currentUser(request); if (!user) return Response.json({ error: "AUTH_REQUIRED" }, { status: 401 }); const db = await database(); const rows = await db.prepare("SELECT id, service_type AS serviceType, title, status, created_at AS createdAt FROM service_requests WHERE owner_id = ? AND organization = ? ORDER BY created_at DESC LIMIT 50").bind(user.id, user.organization).all(); return Response.json({ requests: rows.results }); }
