@@ -3,7 +3,7 @@
 import { ComponentProps, FormEvent, useEffect, useState } from "react";
 import NextImage from "next/image";
 
-type User = { id: string; email: string; fullName: string; organization: string; role: string };
+type User = { id: string; email: string; fullName: string; organization: string; role: string; departmentCode?: string | null; capabilities?: string[] };
 type Service = { code: string; type: string; title: string; copy: string; action: string };
 type Draft = { id: string; version: number; confirmedVersion: number | null; status: string };
 type ApiPayload = { error?: string; user?: User; draft?: Draft; request?: { id: string } };
@@ -22,6 +22,11 @@ const services: Service[] = [
   { code: "03", type: "event_registration", title: "Đăng ký sự kiện", copy: "Chuẩn bị thông tin cho sự kiện và khách tham dự.", action: "Bắt đầu đăng ký" },
   { code: "04", type: "access_card", title: "Thẻ & quyền ra vào", copy: "Đăng ký thẻ mới, gia hạn hoặc báo mất thẻ.", action: "Quản lý thẻ" },
 ];
+
+const roleLabels: Record<string, string> = {
+  tenant_member: "Thành viên khách hàng", customer_member: "Thành viên khách hàng", tenant_admin: "Quản trị doanh nghiệp", customer_admin: "Quản trị doanh nghiệp",
+  service_desk: "Service Desk", facility_staff: "Nhân viên Facility", facility_manager: "Quản lý Facility", event_staff: "Nhân viên Event", event_manager: "Quản lý Event", security_staff: "An ninh & khách", system_admin: "Quản trị hệ thống", auditor: "Kiểm toán viên",
+};
 
 const serviceForms: Record<string, ServiceForm> = {
   space_booking: {
@@ -186,13 +191,14 @@ export function ConciergeWorkspace({ view = "home" }: { view?: PortalView }) {
     <header className="portal-header">
       <a className="brand-lockup" href="#main-content" aria-label="NIC Service Hub, trang chủ"><Image src="/nic-logo.png" alt="Vietnam National Innovation Center" width={142} height={54} priority /><span><strong>Service Hub</strong><small>Dịch vụ tại NIC</small></span></a>
       <nav className="portal-nav" aria-label="Điều hướng chính">{portalNav.map(item => <a key={item.view} className={item.view === "home" ? "active" : ""} href={item.href}>{item.label}</a>)}</nav>
-      <div className="header-actions"><button className="notification-button" aria-label="Thông báo, có 2 thông báo mới">2</button><button className="profile-button" onClick={logout} title="Đăng xuất"><span>{user.fullName.split(" ").slice(-1)[0].slice(0,2).toUpperCase()}</span><span><strong>{user.fullName}</strong><small>{user.organization}</small></span></button></div>
+      <div className="header-actions"><button className="notification-button" aria-label="Thông báo, có 2 thông báo mới">2</button><button className="profile-button" onClick={logout} title="Đăng xuất"><span>{user.fullName.split(" ").slice(-1)[0].slice(0,2).toUpperCase()}</span><span><strong>{user.fullName}</strong><small>{roleLabels[user.role] ?? user.role} · {user.organization}</small></span></button></div>
     </header>
     <section id="main-content" className="portal-content">
       <section className="welcome-grid">
         <div className="welcome-copy"><p className="date-label">Thứ Hai, 20 tháng 7</p><h1>Chào buổi sáng, {user.fullName.split(" ").slice(-1)[0]}.</h1><p>Bạn cần NIC hỗ trợ việc gì hôm nay?</p><label className="service-search"><span aria-hidden="true">⌕</span><input aria-label="Tìm dịch vụ hoặc hướng dẫn" placeholder="Tìm dịch vụ, không gian hoặc hướng dẫn..." /><kbd>Ctrl K</kbd></label></div>
         <aside className="next-event"><div className="event-date"><strong>25</strong><span>THÁNG 7</span></div><div><span className="event-label">Lịch sắp tới</span><h2>Workshop đổi mới sáng tạo</h2><p>14:00 - 16:30, Phòng hội thảo 2.1</p></div><button aria-label="Xem chi tiết Workshop đổi mới sáng tạo">→</button></aside>
       </section>
+      <section className="customer-scope" aria-label="Quyền của tài khoản"><div><span>PHẠM VI TÀI KHOẢN</span><strong>{roleLabels[user.role] ?? user.role}</strong></div><p>Bạn có thể tạo yêu cầu, đặt không gian, đăng ký khách và theo dõi dữ liệu thuộc phạm vi {user.role.includes("admin") ? "doanh nghiệp" : "cá nhân"}. Mỗi yêu cầu sẽ được chuyển đến đúng đội vận hành NIC.</p><a href="/portal/requests">Xem yêu cầu được phép truy cập</a></section>
       <section className="services-section" aria-labelledby="services-title"><div className="section-heading"><div><h2 id="services-title">Dịch vụ thường dùng</h2><p>Bắt đầu nhanh với các tác vụ phổ biến tại NIC.</p></div><button>Xem tất cả dịch vụ</button></div><div className="service-grid">{services.map(service => <article className="service-card" key={service.code}><span className="service-code">{service.code}</span><div><h3>{service.title}</h3><p>{service.copy}</p></div><button onClick={() => { setSelectedService(service); setDraftMessage(""); setActiveDraft(null); }}>{service.action}<span aria-hidden="true">→</span></button></article>)}</div></section>
       <div className="activity-grid">
         <section className="requests-panel" aria-labelledby="requests-title"><div className="section-heading"><div><h2 id="requests-title">Yêu cầu gần đây</h2><p>Theo dõi tiến độ những việc bạn đã gửi.</p></div><button>Xem tất cả</button></div><div className="request-list">{requests.map(request => <article className="request-item" key={request.id}><div className="request-main"><span>{request.id}</span><strong>{request.title}</strong><small>{request.meta}</small></div><div className="request-progress" aria-label={`Tiến độ ${request.step} trên 3 bước`}>{[1,2,3].map(step => <i key={step} className={step <= request.step ? "done" : ""} />)}</div><b className={`request-status step-${request.step}`}>{request.status}</b><button aria-label={`Mở ${request.title}`}>→</button></article>)}</div></section>

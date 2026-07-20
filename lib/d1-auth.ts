@@ -3,7 +3,8 @@ const CSRF_COOKIE = "nic_csrf";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
 const PASSWORD_ITERATIONS = 210_000;
 
-export type SessionUser = { id: string; email: string; fullName: string; organization: string; role: string };
+export type SessionUser = { id: string; email: string; fullName: string; organization: string; role: string; departmentCode: string | null; capabilities: readonly string[] };
+type SessionUserRow = Omit<SessionUser, "capabilities">;
 
 function bytesToBase64(bytes: Uint8Array) {
   let value = "";
@@ -103,8 +104,8 @@ export async function currentUser(request: Request): Promise<SessionUser | null>
   if (!token) return null;
   const now = Math.floor(Date.now() / 1000);
   const db = await database();
-  const row = await db.prepare("SELECT u.id, u.email, u.full_name AS fullName, u.organization, u.role FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ? AND s.expires_at > ?").bind(await sha256(token), now).first<SessionUser>();
-  return row ?? null;
+  const row = await db.prepare("SELECT u.id, u.email, u.full_name AS fullName, COALESCE(m.organization, u.organization) AS organization, COALESCE(m.role, u.role) AS role, d.code AS departmentCode FROM sessions s JOIN users u ON u.id = s.user_id LEFT JOIN organization_memberships m ON m.user_id = u.id AND m.status = 'active' LEFT JOIN departments d ON d.id = m.department_id WHERE s.token_hash = ? AND s.expires_at > ?").bind(await sha256(token), now).first<SessionUserRow>();
+  return row ? { ...row, capabilities: capabilitiesFor(row.role) } : null;
 }
 
 export async function deleteCurrentSession(request: Request) {
@@ -124,7 +125,8 @@ export async function requireCsrf(request: Request) {
   const headerToken = request.headers.get("x-csrf-token");
   if (!sessionToken || !csrfToken || !headerToken || csrfToken !== headerToken) return null;
   const now = Math.floor(Date.now() / 1000); const db = await database();
-  return await db.prepare("SELECT u.id, u.email, u.full_name AS fullName, u.organization, u.role FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ? AND s.csrf_hash = ? AND s.expires_at > ?").bind(await sha256(sessionToken), await sha256(csrfToken), now).first<SessionUser>();
+  const row = await db.prepare("SELECT u.id, u.email, u.full_name AS fullName, COALESCE(m.organization, u.organization) AS organization, COALESCE(m.role, u.role) AS role, d.code AS departmentCode FROM sessions s JOIN users u ON u.id = s.user_id LEFT JOIN organization_memberships m ON m.user_id = u.id AND m.status = 'active' LEFT JOIN departments d ON d.id = m.department_id WHERE s.token_hash = ? AND s.csrf_hash = ? AND s.expires_at > ?").bind(await sha256(sessionToken), await sha256(csrfToken), now).first<SessionUserRow>();
+  return row ? { ...row, capabilities: capabilitiesFor(row.role) } : null;
 }
 
 export async function enforceRateLimit(request: Request, scope: string, identity: string, limit: number, windowSeconds: number) {
@@ -133,3 +135,4 @@ export async function enforceRateLimit(request: Request, scope: string, identity
   const row = await db.prepare("INSERT INTO rate_limits (bucket_key, window_start, count, expires_at) VALUES (?, ?, 1, ?) ON CONFLICT(bucket_key) DO UPDATE SET count = CASE WHEN window_start <= ? THEN 1 ELSE count + 1 END, window_start = CASE WHEN window_start <= ? THEN ? ELSE window_start END, expires_at = ? RETURNING count").bind(bucketKey, now, now + windowSeconds * 2, now - windowSeconds, now - windowSeconds, now, now + windowSeconds * 2).first<{ count: number }>();
   return (row?.count ?? limit + 1) <= limit;
 }
+import { capabilitiesFor } from "@/lib/access-control";

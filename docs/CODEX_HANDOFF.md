@@ -70,6 +70,18 @@ Máy mới cần tạo `.env.local` từ `.env.example`; không sao chép secret
 
 ## Nhật ký bàn giao
 
+### 2026-07-21 - ERP capability model, request routing và typography dễ đọc
+
+- Tăng body copy và control text từ mức 8–11px lên chuẩn 12–14px tại portal, form, bảng yêu cầu và Copilot; giữ headline và responsive hiện có.
+- Thêm `departments`, `organization_memberships` và các trường routing/assignment/visibility trên `service_requests`.
+- Role mới: customer member/admin, service desk, facility staff/manager, event staff/manager, security staff, system admin và auditor.
+- Backend dùng capability grants kết hợp organization, target department, ownership và assignment; UI role label không phải bằng chứng authorization.
+- Request tự định tuyến: booking → Facility, hỗ trợ → Service Desk, sự kiện → Event, thẻ/khách → Security.
+- Customer member chỉ đọc request của mình; customer admin đọc phạm vi doanh nghiệp; operator đọc hàng đợi target department.
+- Demo account được migrate thành `customer_admin` của Innovate Vietnam; UI hiển thị role và phạm vi khả năng của tài khoản.
+- Đã áp migration local, chạy `npm run lint` và `npm test`: 17 test đạt, build thành công.
+- Việc tiếp theo: thêm API cập nhật trạng thái/assignment cho đội vận hành và dashboard Service Desk/Facility; tiếp đó xây booking/work order thật.
+
 ### 2026-07-21 - Hiểu ngôn ngữ tự nhiên và ngữ cảnh cho NIC Copilot
 
 - Thay nhận diện regex đơn lẻ bằng hai tầng: OpenAI Responses API cho hiểu ngôn ngữ tự nhiên và bộ phân loại tiếng Việt local làm fallback.

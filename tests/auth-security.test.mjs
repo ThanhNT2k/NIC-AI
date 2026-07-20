@@ -45,6 +45,18 @@ test("official request reads remain tenant and owner scoped", async () => {
   assert.match(requests, /owner_id = \?/);
   assert.match(requests, /organization = \?/);
   assert.match(requests, /user\.organization/);
+  assert.match(requests, /target_department = \?/);
+  assert.match(requests, /request:read:assigned_team/);
+});
+
+test("ERP roles grant capabilities instead of trusting UI role labels", async () => {
+  const access = await readFile(new URL("../lib/access-control.ts", import.meta.url), "utf8");
+  const auth = await readFile(new URL("../lib/d1-auth.ts", import.meta.url), "utf8");
+  for (const role of ["customer_member", "customer_admin", "service_desk", "facility_staff", "facility_manager", "event_staff", "security_staff", "system_admin", "auditor"]) assert.match(access, new RegExp(`${role}:`));
+  assert.match(access, /request:read:assigned_team/);
+  assert.match(access, /organization:manage_members/);
+  assert.match(auth, /organization_memberships/);
+  assert.match(auth, /capabilitiesFor/);
 });
 
 test("write routes require CSRF and distributed rate limits", async () => {

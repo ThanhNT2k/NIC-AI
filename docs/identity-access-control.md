@@ -1,5 +1,31 @@
 # Tài khoản, phòng ban và phân quyền
 
+## Mô hình quyền triển khai cho ERP liên phòng ban
+
+Quyền không còn lấy trực tiếp từ một cột role để quyết định UI. Một người dùng có `organization_membership` trong tổ chức, có thể thuộc một phòng ban và nhận một role. Role chỉ là gói capability; backend tiếp tục kiểm tra organization, target department, assignment, ownership và trạng thái bản ghi.
+
+| Role | Phạm vi request | Khả năng chính |
+|---|---|---|
+| `customer_member` | Request/booking/visitor do mình tạo | Tạo, sửa draft, xác nhận, submit và theo dõi của mình |
+| `customer_admin` | Toàn bộ dữ liệu của doanh nghiệp mình | Như member, thêm quản lý thành viên và xem request cấp tổ chức |
+| `service_desk` | Request định tuyến đến Service Desk | Phân loại, chuyển đội, yêu cầu bổ sung và cập nhật trạng thái |
+| `facility_staff` | Request được giao cho đội Facility | Nhận việc, cập nhật tiến độ và hoàn thành work order |
+| `facility_manager` | Hàng đợi Facility | Phân công, escalation và xem báo cáo đội |
+| `event_staff` / `event_manager` | Hàng đợi Event | Xử lý logistics/checklist; manager được phân công và báo cáo |
+| `security_staff` | Hàng đợi Security | Xử lý khách, thẻ và quyền ra vào |
+| `system_admin` | Theo capability quản trị | Quản lý quyền/cấu hình; không mặc định thay người dùng submit nghiệp vụ |
+| `auditor` | Read-only theo scope được cấp | Xem audit/report, không sửa nghiệp vụ |
+
+Request từ mọi role có capability `request:create` được định tuyến theo loại: booking → Facility, hỗ trợ chung → Service Desk, sự kiện → Event, khách/thẻ → Security. Người gửi vẫn là owner; đội nhận chỉ được đọc/cập nhật khi target department hoặc assignment phù hợp.
+
+### Khách hàng được phép làm
+
+- Tạo và quản lý draft dịch vụ; xác nhận đúng version rồi tự submit.
+- Đặt không gian, đăng ký sự kiện, khách/thẻ và yêu cầu hỗ trợ.
+- Theo dõi timeline, phản hồi và thông báo thuộc scope của mình.
+- `customer_admin` quản lý thành viên và xem dữ liệu cấp doanh nghiệp.
+- Không tự phân công nhà cung cấp, phê duyệt, thay đổi SLA, xem tenant khác hoặc xem hàng đợi vận hành nội bộ.
+
 ## 1. Mô hình authorization
 
 Hệ thống dùng kết hợp:

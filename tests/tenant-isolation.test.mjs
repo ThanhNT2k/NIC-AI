@@ -6,7 +6,7 @@ import test from "node:test";
 async function migratedDatabase() {
   const database = new DatabaseSync(":memory:");
   database.exec("PRAGMA foreign_keys = ON");
-  for (const migration of ["0000_round_wrecker.sql", "0001_clumsy_black_crow.sql", "0002_stiff_moon_knight.sql"]) {
+  for (const migration of ["0000_round_wrecker.sql", "0001_clumsy_black_crow.sql", "0002_stiff_moon_knight.sql", "0003_erp_access_routing.sql"]) {
     const sql = await readFile(new URL(`../drizzle/${migration}`, import.meta.url), "utf8");
     database.exec(sql.replaceAll("--> statement-breakpoint", ""));
   }
@@ -31,4 +31,12 @@ test("idempotency key is unique per owner", async () => {
   const database = await migratedDatabase();
   const indexes = database.prepare("PRAGMA index_list('service_requests')").all();
   assert.ok(indexes.some(index => index.name === "service_requests_owner_idempotency_idx" && index.unique === 1));
+});
+
+test("membership and request routing schema support cross-team ERP work", async () => {
+  const database = await migratedDatabase();
+  assert.ok(database.prepare("PRAGMA table_info('service_requests')").all().some(column => column.name === "target_department"));
+  assert.ok(database.prepare("PRAGMA table_info('organization_memberships')").all().some(column => column.name === "role"));
+  const membership = database.prepare("SELECT role FROM organization_memberships WHERE user_id = ?").get("demo-tenant-001");
+  assert.equal(membership.role, "customer_admin");
 });
