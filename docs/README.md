@@ -18,7 +18,7 @@ Thư mục này mô tả phương án giải quyết bài toán, kiến trúc m�
 ## Trạng thái tài liệu
 
 - **Đã có trong scaffold:** prototype UI của AI Copilot, domain policy draft cơ bản, migration Supabase ban đầu, unit test, server-render test và CI.
-- **Chưa hoàn thiện:** ERP shell, các phân hệ nghiệp vụ, authentication, RBAC/ABAC, API backend, tích hợp OpenAI, truy vấn hybrid RAG, submit transaction, audit runtime, observability và deployment production.
+- **Chưa hoàn thiện:** ERP shell, các phân hệ nghiệp vụ, authentication, RBAC/ABAC, API backend, cấu hình Gemini production, truy vấn hybrid RAG, submit transaction, audit runtime, observability và deployment production.
 - Nội dung ghi **MUST** là yêu cầu bắt buộc trước production; **SHOULD** là khuyến nghị.
 
 ## Quyết định nền tảng

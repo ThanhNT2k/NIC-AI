@@ -65,21 +65,21 @@ The table is intentionally honest: UI prototypes are not counted as completed op
 
 | Brief requirement | Status | Current evidence | Remaining work |
 |---|---|---|---|
-| AI-powered assistant | **Partial** | Multi-turn Copilot, Vietnamese fallback NLU, optional OpenAI Responses API, structured output | Configure production API secret; add real RAG/evaluation set |
+| AI-powered assistant | **Partial** | Multi-turn Copilot, Vietnamese fallback NLU, optional Gemini API, structured output | Configure production API secret; add real RAG/evaluation set |
 | Receive facility/maintenance requests | **Implemented foundation** | Dedicated support form; draft → confirm → submit; D1 persistence and audit | Work-order detail, attachments and SLA |
 | Support companies during NIC visits/work | **Partial** | Customer portal, request tracking, booking/event/access forms | Notifications and full visitor journey |
-| Coordinate building service providers | **Not implemented** | Request routing schema supports operational teams | Provider directory, assignment, acceptance and escalation |
-| Schedule repairs | **Partial** | Maintenance work orders, assignment, priority, schedule and lifecycle | Provider/technician calendar and SLA escalation |
-| Catering / tea-break requests | **Not implemented** | Event form accepts free-text support needs | Catering catalog, quantities, pricing and supplier workflow |
-| Event logistics | **Partial** | Event registration form and Event team routing | Equipment, catering, checklist, milestones and approvals |
+| Coordinate building service providers | **Implemented (MVP)** | Provider directory and provider assignment on maintenance work orders | Provider acceptance portal, contracts and escalation |
+| Schedule repairs | **Implemented (MVP)** | Maintenance work orders, internal/provider assignment, priority, schedule and lifecycle | Technician calendar and SLA escalation |
+| Catering / tea-break requests | **Implemented (MVP)** | Structured packages, servings, event date, provider assignment and lifecycle | Pricing, menu customization and supplier acceptance portal |
+| Event logistics | **Implemented (MVP)** | Structured logistics notes, catering, provider coordination and Event-team lifecycle | Equipment catalog, detailed checklist and milestones |
 | Workspace reservations | **Implemented (MVP)** | Space catalog, booking ledger, capacity validation and database anti-overlap | Approval policy and recurring bookings |
-| Visitor registration | **Partial** | Access-card/visitor-related form and Security routing | Visitor entity, host, QR, check-in/check-out and access zones |
+| Visitor registration | **Implemented (MVP)** | Visitor/host record, unique badge code, approval, check-in/check-out and Security scope | QR rendering, access zones and badge printing |
 | Facility/service information | **Partial** | Controlled Copilot knowledge and help center | Versioned knowledge base, retrieval and verified citations |
 | Cross-team ERP authorization | **Implemented (MVP)** | Capability grants, department queues, operations dashboards and assignment/status APIs | SLA escalation, comments and evidence |
 
 ### Current maturity
 
-This repository is a **working MVP/prototype**, not a production-complete facility ERP. Authentication, request submission guardrails, operational dashboards, booking anti-overlap and maintenance work orders are implemented. Providers, catering and visitor check-in remain roadmap items.
+This repository is a **working MVP/prototype**, not a production-complete facility ERP. Authentication, request submission guardrails, booking anti-overlap, maintenance/provider coordination, structured catering logistics and visitor check-in are implemented. SLA automation, supplier portals and production controls remain roadmap items.
 
 ---
 
@@ -135,6 +135,7 @@ Submit requires ownership, the current confirmed version and an idempotency key.
 | `/portal/requests` | Requests visible within the user’s authorization scope |
 | `/portal/bookings` | Real space catalog, booking form and personal booking ledger |
 | `/portal/operations` | Service Desk/Facility queue, assignment, status, booking agenda and work orders |
+| `/portal/coordination` | Visitor registration/check-in and event/catering coordination |
 | `/portal/help` | Help center and Copilot entry point |
 
 ---
@@ -181,7 +182,7 @@ flowchart LR
     B[Browser / React 19] --> V[Vinext / Next-compatible routes]
     V --> A[Application APIs]
     A --> D[(Cloudflare D1)]
-    A --> O[OpenAI Responses API]
+    A --> O[Gemini API]
     A --> P[Capability policy]
     P --> D
     O -. optional, server-only .-> A
@@ -190,7 +191,7 @@ flowchart LR
 - **Frontend:** React 19, TypeScript, Vinext/Vite and Tailwind CSS 4.
 - **Backend:** Next-compatible API route handlers deployed as a Cloudflare Worker.
 - **Persistence:** Cloudflare D1/SQLite for the deployed MVP; Drizzle schema and SQL migrations.
-- **AI:** OpenAI SDK with Responses API and Structured Outputs; deterministic local fallback.
+- **AI:** Gemini API with `gemini-2.5-flash` and structured outputs; deterministic local fallback.
 - **Target architecture:** modular monolith, with UI → application/domain → persistence boundaries.
 
 ### Core data entities
@@ -242,10 +243,10 @@ There is no `submit_request` capability. The model cannot approve, assign, submi
 
 ### Runtime modes
 
-1. **OpenAI mode:** enabled when `OPENAI_API_KEY` exists at server runtime. The default model is configured through `OPENAI_MODEL`.
+1. **Gemini mode:** enabled when `GEMINI_API_KEY` exists at server runtime. The default model is `gemini-2.5-flash` and can be configured through `GEMINI_MODEL`.
 2. **Local fallback:** accent-insensitive Vietnamese normalization, recent-context aggregation and intent scoring. It keeps the portal usable without an API key but is not equivalent to a full language model.
 
-Current production limitation: the private demo does not yet have `OPENAI_API_KEY`, so it uses the fallback mode.
+Current production limitation: the private demo does not yet have `GEMINI_API_KEY`, so it uses the fallback mode.
 
 ---
 
@@ -282,8 +283,8 @@ Variables:
 
 | Variable | Required | Description |
 |---|---|---|
-| `OPENAI_API_KEY` | Optional | Server-only key enabling language-model understanding |
-| `OPENAI_MODEL` | Optional | Model override; defaults to the value in `.env.example` |
+| `GEMINI_API_KEY` | Optional | Server-only key enabling language-model understanding |
+| `GEMINI_MODEL` | Optional | Model override; defaults to `gemini-2.5-flash` |
 
 Never commit `.env.local`, API keys or service-role credentials.
 
@@ -312,6 +313,8 @@ Operational accounts use the same test password:
 |---|---|---|
 | `desk@demo.nic.vn` | `service_desk` | `/portal/operations` |
 | `facility@demo.nic.vn` | `facility_manager` | `/portal/operations` |
+| `event@demo.nic.vn` | `event_manager` | `/portal/coordination` |
+| `security@demo.nic.vn` | `security_staff` | `/portal/coordination` |
 
 ### Useful commands
 
@@ -402,12 +405,12 @@ Before production completion, the project still requires an approved identity pr
 ### Known limitations
 
 - Booking is real and rejects overlap, but does not yet support recurring reservations or an approval workflow.
-- Maintenance work orders are internal; no provider portal, SLA escalation or technician calendar yet.
-- Catering/tea-break is not modeled as a structured service.
-- Visitor QR and check-in/check-out do not exist.
+- Provider assignment exists, but no provider-facing acceptance portal, SLA escalation or technician calendar yet.
+- Catering packages and quantities are structured, but pricing/menu customization are not implemented.
+- Visitor approval and check-in/check-out exist; QR rendering, access zones and badge printing are not implemented.
 - Request pages still contain some illustrative records.
 - Copilot citations are controlled labels, not retrieved knowledge-document citations.
-- Production OpenAI secret is not configured.
+- Production Gemini secret is not configured.
 
 ### Delivery roadmap
 
@@ -419,8 +422,8 @@ Before production completion, the project still requires an approved identity pr
 
 #### P2 — Visitor and event operations
 
-1. Visitor, host, organization, access zone and QR/check-in model.
-2. Event checklist, equipment, catering/tea-break and supplier coordination.
+1. Visitor access zones, QR rendering, badge printing and reception search.
+2. Event checklist, equipment catalog, menu/pricing and supplier acceptance.
 3. Notifications and customer/operator timelines.
 
 #### P3 — AI and production readiness

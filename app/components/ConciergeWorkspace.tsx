@@ -109,6 +109,7 @@ const portalNav: Array<{ view: PortalView; label: string; href: string }> = [
   { view: "home", label: "Trang chủ", href: "/portal" },
   { view: "requests", label: "Yêu cầu của tôi", href: "/portal/requests" },
   { view: "bookings", label: "Lịch & đặt chỗ", href: "/portal/bookings" },
+  { view: "coordination", label: "Khách & sự kiện", href: "/portal/coordination" },
   { view: "help", label: "Trung tâm trợ giúp", href: "/portal/help" },
 ];
 

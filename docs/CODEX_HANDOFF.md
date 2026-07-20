@@ -70,6 +70,23 @@ Máy mới cần tạo `.env.local` từ `.env.example`; không sao chép secret
 
 ## Nhật ký bàn giao
 
+### 2026-07-21 - MVP điều phối visitor, provider, catering và event logistics
+
+- Thêm `service_providers`, `visitor_registrations`, `event_service_orders` và liên kết provider trên maintenance work order qua migration `0005`; migration `0006` thêm tài khoản demo Event/Security.
+- Thêm `/portal/coordination` và `/api/coordination`: khách hàng đăng ký visitor, tea break/hậu cần; Security duyệt/check-in/check-out; Event team điều phối, chọn provider, xác nhận và hoàn tất.
+- Visitor có mã badge duy nhất; event service có gói catering, số suất, ghi chú logistics và lifecycle; mọi write action dùng session, CSRF, rate limit và audit.
+- Mở capability mới theo vai trò cho visitor, event service và provider; maintenance work order nhận provider đã được kiểm tra trạng thái/năng lực.
+- Đã áp migration local, chạy `npm run lint` và `npm test`: 26 test đạt, build thành công.
+- Việc tiếp theo: QR/badge printing và access zone; provider portal/acceptance; SLA notification/escalation; menu/pricing và equipment checklist chi tiết.
+
+### 2026-07-21 - Chuyển NIC Copilot sang Gemini 2.5 Flash
+
+- Thay OpenAI Responses API bằng Gemini GenerateContent API; model mặc định là `gemini-2.5-flash`.
+- Đổi cấu hình server runtime sang `GEMINI_API_KEY` và `GEMINI_MODEL`; giữ structured output, hội thoại tám lượt gần nhất và fallback local.
+- Gỡ dependency OpenAI không còn sử dụng và cập nhật README/cấu hình mẫu.
+- Đã chạy `npm run lint` và `npm test`: 23 test đạt, build thành công.
+- Việc triển khai cần cấu hình `GEMINI_API_KEY` trên môi trường production; không ghi khóa vào repository.
+
 ### 2026-07-21 - Dashboard vận hành, booking chống trùng và maintenance work order
 
 - Thêm `/portal/operations` cho Service Desk/Facility với KPI, bộ lọc hàng đợi, phân công, cập nhật trạng thái; Facility có thêm lịch không gian và danh sách work order.

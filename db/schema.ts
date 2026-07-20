@@ -105,6 +105,15 @@ export const bookings = sqliteTable("bookings", {
   updatedAt: integer("updated_at").notNull(),
 });
 
+export const serviceProviders = sqliteTable("service_providers", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  serviceTypes: text("service_types").notNull(),
+  contactName: text("contact_name").notNull(),
+  contactPhone: text("contact_phone").notNull(),
+  status: text("status").notNull().default("active"),
+});
+
 export const maintenanceWorkOrders = sqliteTable("maintenance_work_orders", {
   id: text("id").primaryKey(),
   requestId: text("request_id").notNull().references(() => serviceRequests.id),
@@ -113,9 +122,43 @@ export const maintenanceWorkOrders = sqliteTable("maintenance_work_orders", {
   priority: text("priority").notNull().default("normal"),
   status: text("status").notNull().default("open"),
   assignedTo: text("assigned_to").references(() => users.id),
+  providerId: text("provider_id").references(() => serviceProviders.id),
   scheduledAt: integer("scheduled_at"),
   resolution: text("resolution").notNull().default(""),
   createdBy: text("created_by").notNull().references(() => users.id),
+  createdAt: integer("created_at").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+});
+
+export const visitorRegistrations = sqliteTable("visitor_registrations", {
+  id: text("id").primaryKey(),
+  requesterId: text("requester_id").notNull().references(() => users.id),
+  organization: text("organization").notNull(),
+  visitorName: text("visitor_name").notNull(),
+  visitorPhone: text("visitor_phone").notNull(),
+  hostName: text("host_name").notNull(),
+  visitAt: integer("visit_at").notNull(),
+  purpose: text("purpose").notNull(),
+  status: text("status").notNull().default("pending"),
+  badgeCode: text("badge_code").notNull().unique(),
+  checkedInAt: integer("checked_in_at"),
+  checkedOutAt: integer("checked_out_at"),
+  createdAt: integer("created_at").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+});
+
+export const eventServiceOrders = sqliteTable("event_service_orders", {
+  id: text("id").primaryKey(),
+  requesterId: text("requester_id").notNull().references(() => users.id),
+  organization: text("organization").notNull(),
+  eventName: text("event_name").notNull(),
+  eventAt: integer("event_at").notNull(),
+  attendeeCount: integer("attendee_count").notNull(),
+  cateringPackage: text("catering_package").notNull(),
+  servings: integer("servings").notNull(),
+  logisticsNotes: text("logistics_notes").notNull().default(""),
+  providerId: text("provider_id").references(() => serviceProviders.id),
+  status: text("status").notNull().default("requested"),
   createdAt: integer("created_at").notNull(),
   updatedAt: integer("updated_at").notNull(),
 });

@@ -10,7 +10,7 @@
     "build": "vinext build",
     "start": "vinext start",
     "test": "npm run test:unit && npm run build && node --test tests/rendered-html.test.mjs",
-    "test:unit": "tsc lib/request-policy.ts lib/operations-policy.ts --outDir dist-test --module nodenext --moduleResolution nodenext --target es2022 && node --test tests/request-policy.test.mjs tests/operations-policy.test.mjs tests/auth-security.test.mjs tests/tenant-isolation.test.mjs",
+    "test:unit": "tsc lib/request-policy.ts lib/operations-policy.ts lib/coordination-policy.ts --outDir dist-test --module nodenext --moduleResolution nodenext --target es2022 && node --test tests/request-policy.test.mjs tests/operations-policy.test.mjs tests/coordination-policy.test.mjs tests/auth-security.test.mjs tests/tenant-isolation.test.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate",
     "db:local:migrate": "wrangler d1 migrations apply site-creator-d1 --local --config wrangler.local.jsonc --persist-to .wrangler/state"
@@ -19,7 +19,6 @@
     "@supabase/supabase-js": "^2.110.7",
     "drizzle-orm": "0.45.2",
     "next": "16.2.6",
-    "openai": "^6.48.0",
     "react": "19.2.6",
     "react-dom": "19.2.6",
     "zod": "^4.4.3"

@@ -1,4 +1,3 @@
-import OpenAI from "openai";
 import { currentUser } from "@/lib/d1-auth";
 
 type ChatTurn = { role: "user" | "assistant"; text: string };
@@ -30,23 +29,28 @@ function localUnderstanding(message: string, history: ChatTurn[]): CopilotReply 
 }
 
 async function languageModelUnderstanding(message: string, history: ChatTurn[]): Promise<CopilotReply | null> {
-  const { env } = await import("cloudflare:workers") as unknown as { env: { OPENAI_API_KEY?: string; OPENAI_MODEL?: string } };
-  if (!env.OPENAI_API_KEY) return null;
-  const client = new OpenAI({ apiKey: env.OPENAI_API_KEY });
-  const response = await client.responses.create({
-    model: env.OPENAI_MODEL ?? "gpt-5.6-sol",
-    reasoning: { effort: "low" },
-    instructions: `Bạn là NIC Copilot, trợ lý tiếng Việt cho cổng dịch vụ Trung tâm Đổi mới sáng tạo Quốc gia. Hiểu cách diễn đạt tự nhiên, lỗi chính tả nhẹ và tham chiếu theo ngữ cảnh. Chỉ được: giải thích hướng dẫn, xác định một trong bốn dịch vụ, hoặc đề xuất mở form để người dùng tự kiểm tra. Không được tuyên bố đã đặt chỗ, đã gửi, đã phê duyệt; không được tự submit. Chỉ dùng nguồn trong KNOWLEDGE. Nếu thiếu dữ kiện, hỏi đúng một câu làm rõ. Trả lời ngắn, cụ thể bằng tiếng Việt.
+  const { env } = await import("cloudflare:workers") as unknown as { env: { GEMINI_API_KEY?: string; GEMINI_MODEL?: string } };
+  if (!env.GEMINI_API_KEY) return null;
+  const model = env.GEMINI_MODEL ?? "gemini-2.5-flash";
+  if (!/^[a-z0-9._-]+$/i.test(model)) throw new Error("Invalid Gemini model name");
+  const requestBody = {
+    systemInstruction: { parts: [{ text: `Bạn là NIC Copilot, trợ lý tiếng Việt cho cổng dịch vụ Trung tâm Đổi mới sáng tạo Quốc gia. Hiểu cách diễn đạt tự nhiên, lỗi chính tả nhẹ và tham chiếu theo ngữ cảnh. Chỉ được: giải thích hướng dẫn, xác định một trong bốn dịch vụ, hoặc đề xuất mở form để người dùng tự kiểm tra. Không được tuyên bố đã đặt chỗ, đã gửi, đã phê duyệt; không được tự submit. Chỉ dùng nguồn trong KNOWLEDGE. Nếu thiếu dữ kiện, hỏi đúng một câu làm rõ. Trả lời ngắn, cụ thể bằng tiếng Việt.
 
 KNOWLEDGE:
 space_booking: ${knowledge.space_booking.answer}
 support: ${knowledge.support.answer}
 event_registration: ${knowledge.event_registration.answer}
 access_card: ${knowledge.access_card.answer}`,
-    input: [...history.slice(-8).map(turn => ({ role: turn.role, content: turn.text })), { role: "user" as const, content: message }],
-    text: { format: { type: "json_schema", name: "nic_copilot_reply", strict: true, schema: { type: "object", additionalProperties: false, properties: { answer: { type: "string" }, sources: { type: "array", items: { type: "string", enum: ["Danh mục không gian NIC", "Quy trình đặt chỗ", "Hướng dẫn thẻ và quyền ra vào", "Danh mục hỗ trợ vận hành", "Hướng dẫn đăng ký sự kiện", "Trung tâm trợ giúp NIC"] } }, suggestedService: { type: ["string", "null"], enum: ["space_booking", "support", "event_registration", "access_card", null] } }, required: ["answer", "sources", "suggestedService"] } } },
-  });
-  const parsed = JSON.parse(response.output_text) as CopilotReply & { suggestedService?: CopilotReply["suggestedService"] | null };
+    } ] },
+    contents: [...history.slice(-8).map(turn => ({ role: turn.role === "assistant" ? "model" : "user", parts: [{ text: turn.text }] })), { role: "user", parts: [{ text: message }] }],
+    generationConfig: { responseMimeType: "application/json", responseJsonSchema: { type: "object", additionalProperties: false, properties: { answer: { type: "string" }, sources: { type: "array", items: { type: "string", enum: ["Danh mục không gian NIC", "Quy trình đặt chỗ", "Hướng dẫn thẻ và quyền ra vào", "Danh mục hỗ trợ vận hành", "Hướng dẫn đăng ký sự kiện", "Trung tâm trợ giúp NIC"] } }, suggestedService: { type: ["string", "null"], enum: ["space_booking", "support", "event_registration", "access_card", null] } }, required: ["answer", "sources", "suggestedService"] } },
+  };
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, { method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY }, body: JSON.stringify(requestBody) });
+  if (!response.ok) throw new Error(`Gemini API returned ${response.status}`);
+  const result = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+  const outputText = result.candidates?.[0]?.content?.parts?.map(part => part.text ?? "").join("");
+  if (!outputText) throw new Error("Gemini API returned no text");
+  const parsed = JSON.parse(outputText) as CopilotReply & { suggestedService?: CopilotReply["suggestedService"] | null };
   return { answer: parsed.answer, sources: parsed.sources, ...(parsed.suggestedService ? { suggestedService: parsed.suggestedService } : {}) };
 }
 

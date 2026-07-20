@@ -6,7 +6,7 @@ import test from "node:test";
 async function migratedDatabase() {
   const database = new DatabaseSync(":memory:");
   database.exec("PRAGMA foreign_keys = ON");
-  for (const migration of ["0000_round_wrecker.sql", "0001_clumsy_black_crow.sql", "0002_stiff_moon_knight.sql", "0003_erp_access_routing.sql", "0004_brief_rockslide.sql"]) {
+  for (const migration of ["0000_round_wrecker.sql", "0001_clumsy_black_crow.sql", "0002_stiff_moon_knight.sql", "0003_erp_access_routing.sql", "0004_brief_rockslide.sql", "0005_coordination_mvp.sql", "0006_coordination_demo_accounts.sql"]) {
     const sql = await readFile(new URL(`../drizzle/${migration}`, import.meta.url), "utf8");
     database.exec(sql.replaceAll("--> statement-breakpoint", ""));
   }
@@ -56,4 +56,14 @@ test("only one active maintenance work order is allowed per request", async () =
   const create = database.prepare("INSERT INTO maintenance_work_orders (id,request_id,title,location,priority,status,created_by,created_at,updated_at) VALUES (?,?,?,?,?,'open',?,?,?)");
   create.run("wo-a","wo-request","Kiểm tra điều hòa","Tầng 3","high","demo-facility-001",1,1);
   assert.throws(()=>create.run("wo-b","wo-request","Kiểm tra lần hai","Tầng 3","normal","demo-facility-001",1,1),/UNIQUE/);
+});
+
+test("coordination migration supports visitors, providers and catering orders", async () => {
+  const database = await migratedDatabase();
+  const tables = database.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(row=>row.name);
+  assert.ok(tables.includes("visitor_registrations"));
+  assert.ok(tables.includes("service_providers"));
+  assert.ok(tables.includes("event_service_orders"));
+  assert.ok(database.prepare("PRAGMA table_info('maintenance_work_orders')").all().some(column=>column.name==="provider_id"));
+  assert.ok(database.prepare("SELECT id FROM service_providers WHERE service_types LIKE '%catering%'").get());
 });
