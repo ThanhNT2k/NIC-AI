@@ -68,6 +68,14 @@ Máy mới cần tạo `.env.local` từ `.env.example`; không sao chép secret
 
 ## Nhật ký bàn giao
 
+### 2026-07-21 - Browser E2E customer ↔ Facility ↔ notification ↔ attachment
+
+- Kiểm thử trực tiếp trên browser local bằng request Facility thật: customer upload fixture TXT, thấy metadata và audit timeline, sau đó gửi comment.
+- Facility đăng nhập ở scope `assigned_team`, nhận đúng unread notification, mở đúng deep-link request, xem và tải được attachment qua endpoint riêng tư, rồi phản hồi customer.
+- Customer đăng nhập lại và nhận đúng notification phản hồi từ Facility. Browser console không có warning/error trong toàn bộ hành trình.
+- Thêm `docs/browser-e2e.md` mô tả tiền điều kiện, kịch bản tái kiểm thử và kết quả mong đợi; fixture vô hại nằm tại `tests/fixtures/request-attachment-e2e.txt`.
+- Chưa chạy Supabase RLS integration bằng hai JWT khác tenant vì repository chưa có Supabase staging runtime/project config hoặc test identity phù hợp. Bước tiếp theo: cấu hình staging an toàn và tự động hóa RLS isolation test; song song nối malware scanner/quarantine production.
+
 ### 2026-07-21 - Attachment riêng tư cho trao đổi request
 
 - Thêm migration D1 `0012_request_attachments.sql` và Supabase `202607210013_request_attachments.sql`; metadata liên kết request/uploader, giới hạn 8 MB, lưu SHA-256 và chỉ lộ bản ghi `validated` theo scope RLS của request cha.

@@ -1,0 +1,1 @@
+Tệp kiểm thử E2E cho luồng trao đổi yêu cầu NIC Service Hub.

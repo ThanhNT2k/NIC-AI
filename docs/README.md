@@ -18,6 +18,7 @@ Thư mục này mô tả phương án giải quyết bài toán, kiến trúc m�
 12. [P2 — Danh mục vận hành](./P2_OPERATIONAL_PORTFOLIO.md)
 13. [P3 — Procurement và nền tảng enterprise](./P3_ENTERPRISE_PROCUREMENT.md)
 14. [Chẩn đoán runtime và tự động hóa nghiệp vụ](./diagnostics-automation.md)
+15. [Browser E2E cho cộng tác request](./browser-e2e.md)
 
 ## Trạng thái tài liệu
 
