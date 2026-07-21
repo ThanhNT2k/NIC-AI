@@ -22,7 +22,7 @@ async function derivePassword(password: string, salt: Uint8Array, iterations = P
   return new Uint8Array(bits);
 }
 
-async function sha256(value: string) {
+export async function sha256(value: string) {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
   return bytesToBase64(new Uint8Array(digest));
 }

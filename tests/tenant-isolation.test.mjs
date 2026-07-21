@@ -6,7 +6,7 @@ import test from "node:test";
 async function migratedDatabase() {
   const database = new DatabaseSync(":memory:");
   database.exec("PRAGMA foreign_keys = ON");
-  for (const migration of ["0000_round_wrecker.sql", "0001_clumsy_black_crow.sql", "0002_stiff_moon_knight.sql", "0003_erp_access_routing.sql", "0004_brief_rockslide.sql", "0005_coordination_mvp.sql", "0006_coordination_demo_accounts.sql", "0007_p1_operational_reliability.sql"]) {
+  for (const migration of ["0000_round_wrecker.sql", "0001_clumsy_black_crow.sql", "0002_stiff_moon_knight.sql", "0003_erp_access_routing.sql", "0004_brief_rockslide.sql", "0005_coordination_mvp.sql", "0006_coordination_demo_accounts.sql", "0007_p1_operational_reliability.sql", "0008_p2_operational_portfolio.sql"]) {
     const sql = await readFile(new URL(`../drizzle/${migration}`, import.meta.url), "utf8");
     database.exec(sql.replaceAll("--> statement-breakpoint", ""));
   }
@@ -96,4 +96,22 @@ test("provider response history versions and notification dedupe are unique",asy
   assert.throws(()=>database.prepare("INSERT INTO provider_assignment_responses (id,assignment_id,version,response,note,actor_id,created_at) VALUES ('response-2','assignment-1',2,'reject','duplicate','demo-provider-001',2)").run(),/UNIQUE/);
   database.prepare("INSERT INTO notifications (id,recipient_id,type,entity_type,entity_id,dedupe_key,title,body,created_at) VALUES ('notice-1','demo-provider-001','provider_assignment','provider_assignment','assignment-1','dedupe-1','New','Body',1)").run();
   assert.throws(()=>database.prepare("INSERT INTO notifications (id,recipient_id,type,entity_type,entity_id,dedupe_key,title,body,created_at) VALUES ('notice-2','demo-provider-001','provider_assignment','provider_assignment','assignment-1','dedupe-1','New','Body',1)").run(),/UNIQUE/);
+});
+
+test("P2 schema protects cost snapshots, QR replay and maker-checker",async()=>{
+  const database=await migratedDatabase();
+  const tables=database.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(row=>row.name);
+  for(const name of ["assets","maintenance_plans","maintenance_plan_runs","work_order_cost_lines","event_templates","event_checklist_tasks","event_budget_approvals","visitor_qr_tokens","badge_print_jobs","visitor_access_grants","master_data_records"])assert.ok(tables.includes(name),name);
+  assert.equal(database.prepare("SELECT parent_asset_id AS parentAssetId FROM assets WHERE id='asset-hvac-demo'").get().parentAssetId,null);
+  assert.equal(database.prepare("SELECT recurrence_days AS days FROM maintenance_plans WHERE id='plan-hvac-demo'").get().days,90);
+  database.prepare("INSERT INTO service_drafts (id,owner_id,service_type,title,details,status,version,confirmed_version,created_at,updated_at) VALUES ('p2-draft','demo-tenant-001','support','P2','P2','submitted',1,1,1,1)").run();
+  database.prepare("INSERT INTO service_requests (id,draft_id,owner_id,organization,service_type,title,details,status,target_department,requester_role,visibility,idempotency_key,created_at,updated_at) VALUES ('p2-request','p2-draft','demo-tenant-001','Innovate Vietnam','support','P2','P2','in_progress','facility','customer_admin','organization','p2-key',1,1)").run();
+  database.prepare("INSERT INTO maintenance_work_orders (id,request_id,title,location,priority,status,asset_id,created_by,created_at,updated_at) VALUES ('p2-wo','p2-request','P2','NIC','normal','open','asset-hvac-demo','demo-facility-001',1,1)").run();
+  database.prepare("INSERT INTO work_order_cost_lines (id,work_order_id,line_type,phase,description,quantity_milli,unit,unit_price_minor,tax_bps,discount_bps,subtotal_minor,discount_minor,tax_minor,line_total_minor,currency,created_by,created_at) VALUES ('cost-1','p2-wo','material','estimate','Filter',1000,'cái',10000,1000,0,10000,0,1000,11000,'VND','demo-facility-001',1)").run();
+  assert.throws(()=>database.prepare("UPDATE work_order_cost_lines SET unit_price_minor=1 WHERE id='cost-1'").run(),/COST_SNAPSHOT_IMMUTABLE/);
+  database.prepare("INSERT INTO visitor_registrations (id,requester_id,organization,visitor_name,visitor_phone,host_name,visit_at,purpose,status,badge_code,created_at,updated_at) VALUES ('visitor-p2','demo-tenant-001','Innovate Vietnam','Khách P2','0900000000','Host',1000,'Test','approved','BADGE-P2',1,1)").run();
+  database.prepare("INSERT INTO visitor_qr_tokens (id,visitor_id,token_hash,expires_at,created_by,created_at) VALUES ('qr-p2','visitor-p2','hash-p2',2000,'demo-security-001',1)").run();
+  database.prepare("UPDATE visitor_qr_tokens SET redeemed_at=100,redeemed_by='demo-security-001' WHERE id='qr-p2'").run();
+  assert.throws(()=>database.prepare("UPDATE visitor_qr_tokens SET redeemed_at=101 WHERE id='qr-p2'").run(),/QR_ALREADY_REDEEMED/);
+  assert.throws(()=>database.prepare("INSERT INTO master_data_records (id,entity_type,record_key,version,status,owner_id,effective_from,payload,reason,maker_id,checker_id,created_at) VALUES ('md-self','cost_catalog','SELF',1,'approved','demo-system-admin-001',1,'{}','test','demo-system-admin-001','demo-system-admin-001',1)").run(),/CHECK/);
 });

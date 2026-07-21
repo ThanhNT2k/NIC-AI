@@ -14,11 +14,13 @@ Thư mục này mô tả phương án giải quyết bài toán, kiến trúc m�
 8. [AI Copilot và Hybrid RAG](./ai-rag.md)
 9. [Dữ liệu, RLS và audit](./data-security.md)
 10. [Kiểm thử, CI/CD và vận hành](./testing-operations.md)
+11. [P1 — Độ tin cậy vận hành](./P1_OPERATIONAL_RELIABILITY.md)
+12. [P2 — Danh mục vận hành](./P2_OPERATIONAL_PORTFOLIO.md)
 
 ## Trạng thái tài liệu
 
-- **Đã có trong scaffold:** prototype UI của AI Copilot, domain policy draft cơ bản, migration Supabase ban đầu, unit test, server-render test và CI.
-- **Chưa hoàn thiện:** ERP shell, các phân hệ nghiệp vụ, authentication, RBAC/ABAC, API backend, cấu hình Gemini production, truy vấn hybrid RAG, submit transaction, audit runtime, observability và deployment production.
+- **Đã có trong MVP:** ERP shell theo role, session và capability backend, request/booking/work order, visitor/event/provider, độ tin cậy P1, danh mục vận hành P2, audit, migration D1, unit/integration test và CI.
+- **Chưa hoàn thiện:** cấu hình secret và lịch cron production, connector thiết bị/controller thật, supplier portal đầy đủ, Hybrid RAG có citation, observability/backup/MFA và kiểm định production.
 - Nội dung ghi **MUST** là yêu cầu bắt buộc trước production; **SHOULD** là khuyến nghị.
 
 ## Quyết định nền tảng

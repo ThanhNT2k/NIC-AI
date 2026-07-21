@@ -70,6 +70,17 @@ Máy mới cần tạo `.env.local` từ `.env.example`; không sao chép secret
 
 ## Nhật ký bàn giao
 
+### 2026-07-21 - Hoàn thành P2 danh mục vận hành từ Kanban #6–#11
+
+- Thêm migration `0008` cho asset hierarchy/warranty/owner, preventive maintenance, snapshot chi phí work order, event template/checklist/budget, visitor QR/badge/access controller, master data effective-date và analytics.
+- Thêm `/portal/portfolio`, API `/api/operations/p2` và cron `/api/cron/p2`; mọi write action dùng session, CSRF, capability backend, rate limit và audit.
+- Preventive maintenance sinh work order idempotent theo plan/kỳ hạn; chi phí được backend tính bằng số nguyên và database chặn sửa snapshot.
+- Event tạo từ template versioned, task kiểm tra dependency và budget dùng maker-checker. QR chỉ lưu hash, chống replay; offline hold không cấp access.
+- Master data không hard delete, có owner/version/effective date và maker-checker. Analytics công bố timezone, thời điểm refresh, filter, SLA/MTTR/provider/cost, data quality và drill-down có quyền.
+- Tài liệu endpoint, mô hình dữ liệu và vận hành: `docs/P2_OPERATIONAL_PORTFOLIO.md`.
+- Đã áp migration local; đăng nhập Facility, API/trang P2 đều trả 200 với dữ liệu seed; `npm run lint` và `npm test` đạt 35 unit/integration test + 1 rendered HTML, production build thành công.
+- Việc tiếp theo: cấu hình `P2_CRON_SECRET` và lịch cron production; kết nối printer/access controller thật; theo dõi data-quality và hiệu chỉnh catalog/KPI bằng dữ liệu vận hành.
+
 ### 2026-07-21 - Hoàn thành P1 độ tin cậy vận hành từ Kanban #1–#5
 
 - Thêm migration `0007` cho operation template/task, phê duyệt đóng work order, business calendar/SLA event, resource skill/calendar, provider response version, access review và maker-checker.

@@ -67,19 +67,19 @@ The table is intentionally honest: UI prototypes are not counted as completed op
 |---|---|---|---|
 | AI-powered assistant | **Partial** | Multi-turn Copilot, Vietnamese fallback NLU, optional Gemini API, structured output | Configure production API secret; add real RAG/evaluation set |
 | Receive facility/maintenance requests | **Implemented foundation** | Dedicated support form; draft → confirm → submit; D1 persistence and audit | Work-order detail, attachments and SLA |
-| Support companies during NIC visits/work | **Partial** | Customer portal, request tracking, booking/event/access forms | Notifications and full visitor journey |
+| Support companies during NIC visits/work | **Implemented (MVP)** | Customer portal, request tracking, booking/event/access forms, QR check-in and badge jobs | Production device/controller integration |
 | Coordinate building service providers | **Implemented (MVP)** | Provider directory and provider assignment on maintenance work orders | Provider acceptance portal, contracts and escalation |
-| Schedule repairs | **Implemented (MVP)** | Maintenance work orders, internal/provider assignment, priority, schedule and lifecycle | Technician calendar and SLA escalation |
-| Catering / tea-break requests | **Implemented (MVP)** | Structured packages, servings, event date, provider assignment and lifecycle | Pricing, menu customization and supplier acceptance portal |
-| Event logistics | **Implemented (MVP)** | Structured logistics notes, catering, provider coordination and Event-team lifecycle | Equipment catalog, detailed checklist and milestones |
+| Schedule repairs | **Implemented (MVP)** | Maintenance work orders, preventive plans, internal/provider assignment, technician calendar, SLA and lifecycle | Production cron scheduling and field evidence |
+| Catering / tea-break requests | **Implemented (MVP)** | Structured packages, servings, event date, versioned pricing snapshot, provider assignment and lifecycle | Supplier self-service portal |
+| Event logistics | **Implemented (MVP)** | Versioned template, dependency checklist, equipment/service lines, budget approval and audit | Production catalog enrichment |
 | Workspace reservations | **Implemented (MVP)** | Space catalog, booking ledger, capacity validation and database anti-overlap | Approval policy and recurring bookings |
-| Visitor registration | **Implemented (MVP)** | Visitor/host record, unique badge code, approval, check-in/check-out and Security scope | QR rendering, access zones and badge printing |
+| Visitor registration | **Implemented (MVP)** | Visitor/host record, one-time QR, access zones, badge print/reprint, check-in/out and offline-safe hold | Production printer/controller adapters |
 | Facility/service information | **Partial** | Controlled Copilot knowledge and help center | Versioned knowledge base, retrieval and verified citations |
-| Cross-team ERP authorization | **Implemented (MVP)** | Capability grants, department queues, operations dashboards and assignment/status APIs | SLA escalation, comments and evidence |
+| Cross-team ERP authorization | **Implemented (MVP)** | Capability grants, department queues, maker-checker, SLA escalation, operations dashboards and audited APIs | Production identity and periodic policy review |
 
 ### Current maturity
 
-This repository is a **working MVP/prototype**, not a production-complete facility ERP. Authentication, request submission guardrails, booking anti-overlap, maintenance/provider coordination, structured catering logistics and visitor check-in are implemented. SLA automation, supplier portals and production controls remain roadmap items.
+This repository is a **working MVP/prototype**, not a production-complete facility ERP. P1 operational reliability and P2 asset/cost/event/visitor/master-data/analytics workflows are implemented with backend authorization, audit and database invariants. Production secrets/schedules, real device adapters, supplier self-service, observability and identity hardening remain roadmap items.
 
 ---
 
@@ -136,6 +136,8 @@ Submit requires ownership, the current confirmed version and an idempotency key.
 | `/portal/bookings` | Real space catalog, booking form and personal booking ledger |
 | `/portal/operations` | Service Desk/Facility queue, assignment, status, booking agenda and work orders |
 | `/portal/coordination` | Visitor registration/check-in and event/catering coordination |
+| `/portal/reliability` | SLA automation, provider response, resource scheduling and access review |
+| `/portal/portfolio` | Asset/PM, cost, event template, visitor device, master data and analytics P2 |
 | `/portal/help` | Help center and Copilot entry point |
 
 ---
@@ -332,7 +334,7 @@ Operational accounts use the same test password:
 
 ## 7. Testing & Evaluation
 
-Current verified baseline: **23 automated tests passing** (22 unit/integration and 1 rendered-page test).
+Current verified baseline: **36 automated tests passing** (35 unit/integration and 1 rendered-page test).
 
 | Test area | Evidence |
 |---|---|
@@ -414,17 +416,16 @@ Before production completion, the project still requires an approved identity pr
 
 ### Delivery roadmap
 
-#### P1 — Operational core
+#### P1 — Operational core (completed MVP)
 
-1. Comments, evidence, SLA timers, notification and escalation APIs.
-2. Provider directory, technician calendar and external assignment/acceptance.
-3. Booking approval policy, recurring reservations and calendar views.
+1. SLA timers, notification/escalation, provider response and resource calendar.
+2. Operation templates, task evidence, close approval and periodic access review.
 
-#### P2 — Visitor and event operations
+#### P2 — Operational portfolio (completed MVP)
 
-1. Visitor access zones, QR rendering, badge printing and reception search.
-2. Event checklist, equipment catalog, menu/pricing and supplier acceptance.
-3. Notifications and customer/operator timelines.
+1. Asset hierarchy, warranty, preventive maintenance and immutable work-order costs.
+2. Event templates/dependencies/budget approval and visitor QR/badge/access-zone workflow.
+3. Effective-dated master data with maker-checker and authorized operational analytics.
 
 #### P3 — AI and production readiness
 

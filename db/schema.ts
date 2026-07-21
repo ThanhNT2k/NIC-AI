@@ -123,6 +123,8 @@ export const maintenanceWorkOrders = sqliteTable("maintenance_work_orders", {
   status: text("status").notNull().default("open"),
   assignedTo: text("assigned_to").references(() => users.id),
   providerId: text("provider_id").references(() => serviceProviders.id),
+  assetId: text("asset_id"),
+  maintenancePlanId: text("maintenance_plan_id"),
   scheduledAt: integer("scheduled_at"),
   resolution: text("resolution").notNull().default(""),
   createdBy: text("created_by").notNull().references(() => users.id),
@@ -165,6 +167,7 @@ export const visitorRegistrations = sqliteTable("visitor_registrations", {
   purpose: text("purpose").notNull(),
   status: text("status").notNull().default("pending"),
   badgeCode: text("badge_code").notNull().unique(),
+  accessZoneId: text("access_zone_id"),
   checkedInAt: integer("checked_in_at"),
   checkedOutAt: integer("checked_out_at"),
   createdAt: integer("created_at").notNull(),
@@ -182,6 +185,11 @@ export const eventServiceOrders = sqliteTable("event_service_orders", {
   servings: integer("servings").notNull(),
   logisticsNotes: text("logistics_notes").notNull().default(""),
   providerId: text("provider_id").references(() => serviceProviders.id),
+  templateId: text("template_id"),
+  budgetEstimateMinor: integer("budget_estimate_minor").notNull().default(0),
+  budgetActualMinor: integer("budget_actual_minor").notNull().default(0),
+  budgetThresholdMinor: integer("budget_threshold_minor").notNull().default(0),
+  budgetStatus: text("budget_status").notNull().default("not_required"),
   status: text("status").notNull().default("requested"),
   createdAt: integer("created_at").notNull(),
   updatedAt: integer("updated_at").notNull(),
@@ -196,3 +204,36 @@ export const auditLogs = sqliteTable("audit_logs", {
   metadata: text("metadata").notNull().default("{}"),
   createdAt: integer("created_at").notNull(),
 });
+
+export const assets = sqliteTable("assets", {
+  id: text("id").primaryKey(), organization: text("organization").notNull(), parentAssetId: text("parent_asset_id"), code: text("code").notNull(), name: text("name").notNull(), location: text("location").notNull(), category: text("category").notNull(), status: text("status").notNull().default("active"), serialNumber: text("serial_number"), model: text("model"), providerId: text("provider_id").references(() => serviceProviders.id), warrantyStart: integer("warranty_start"), warrantyEnd: integer("warranty_end"), ownerId: text("owner_id").notNull().references(() => users.id), createdAt: integer("created_at").notNull(), updatedAt: integer("updated_at").notNull(),
+}, (table) => [uniqueIndex("assets_org_code_unique").on(table.organization, table.code)]);
+
+export const maintenancePlans = sqliteTable("maintenance_plans", {
+  id: text("id").primaryKey(), assetId: text("asset_id").notNull().references(() => assets.id), name: text("name").notNull(), recurrenceDays: integer("recurrence_days").notNull(), leadTimeDays: integer("lead_time_days").notNull().default(7), bookingWindowDays: integer("booking_window_days").notNull().default(14), nextDueAt: integer("next_due_at").notNull(), templateId: text("template_id").references(() => operationTemplates.id), status: text("status").notNull().default("active"), createdBy: text("created_by").notNull().references(() => users.id), createdAt: integer("created_at").notNull(), updatedAt: integer("updated_at").notNull(),
+});
+
+export const maintenancePlanRuns = sqliteTable("maintenance_plan_runs", {
+  id: text("id").primaryKey(), planId: text("plan_id").notNull().references(() => maintenancePlans.id), dueAt: integer("due_at").notNull(), workOrderId: text("work_order_id").notNull().references(() => maintenanceWorkOrders.id), idempotencyKey: text("idempotency_key").notNull().unique(), createdAt: integer("created_at").notNull(),
+}, (table) => [uniqueIndex("maintenance_plan_run_due_unique").on(table.planId, table.dueAt)]);
+
+export const workOrderCostLines = sqliteTable("work_order_cost_lines", {
+  id: text("id").primaryKey(), workOrderId: text("work_order_id").notNull().references(() => maintenanceWorkOrders.id), lineType: text("line_type").notNull(), phase: text("phase").notNull(), description: text("description").notNull(), quantityMilli: integer("quantity_milli").notNull(), unit: text("unit").notNull(), unitPriceMinor: integer("unit_price_minor").notNull(), taxBps: integer("tax_bps").notNull().default(0), discountBps: integer("discount_bps").notNull().default(0), subtotalMinor: integer("subtotal_minor").notNull(), discountMinor: integer("discount_minor").notNull(), taxMinor: integer("tax_minor").notNull(), lineTotalMinor: integer("line_total_minor").notNull(), currency: text("currency").notNull().default("VND"), catalogRecordId: text("catalog_record_id"), createdBy: text("created_by").notNull().references(() => users.id), createdAt: integer("created_at").notNull(),
+});
+
+export const eventTemplates = sqliteTable("event_templates", {
+  id: text("id").primaryKey(), name: text("name").notNull(), eventType: text("event_type").notNull(), scale: text("scale").notNull(), version: integer("version").notNull().default(1), budgetThresholdMinor: integer("budget_threshold_minor").notNull().default(0), status: text("status").notNull().default("draft"), createdBy: text("created_by").notNull().references(() => users.id), createdAt: integer("created_at").notNull(),
+});
+export const eventTemplateTasks = sqliteTable("event_template_tasks", { id: text("id").primaryKey(), templateId: text("template_id").notNull().references(() => eventTemplates.id, { onDelete: "cascade" }), sequence: integer("sequence").notNull(), title: text("title").notNull(), dueOffsetDays: integer("due_offset_days").notNull().default(0), dependencySequence: integer("dependency_sequence"), required: integer("required").notNull().default(1), defaultAssigneeRole: text("default_assignee_role") });
+export const eventTemplateLines = sqliteTable("event_template_lines", { id: text("id").primaryKey(), templateId: text("template_id").notNull().references(() => eventTemplates.id, { onDelete: "cascade" }), lineType: text("line_type").notNull(), description: text("description").notNull(), quantityMilli: integer("quantity_milli").notNull(), unit: text("unit").notNull(), unitPriceMinor: integer("unit_price_minor").notNull() });
+export const eventChecklistTasks = sqliteTable("event_checklist_tasks", { id: text("id").primaryKey(), eventOrderId: text("event_order_id").notNull().references(() => eventServiceOrders.id, { onDelete: "cascade" }), sourceTemplateTaskId: text("source_template_task_id").references(() => eventTemplateTasks.id), sequence: integer("sequence").notNull(), title: text("title").notNull(), dueAt: integer("due_at").notNull(), dependsOnTaskId: text("depends_on_task_id"), required: integer("required").notNull().default(1), assigneeId: text("assignee_id").references(() => users.id), status: text("status").notNull().default("pending"), completedBy: text("completed_by").references(() => users.id), completedAt: integer("completed_at"), updatedAt: integer("updated_at").notNull() });
+export const eventBudgetLines = sqliteTable("event_budget_lines", { id: text("id").primaryKey(), eventOrderId: text("event_order_id").notNull().references(() => eventServiceOrders.id, { onDelete: "cascade" }), sourceTemplateLineId: text("source_template_line_id").references(() => eventTemplateLines.id), lineType: text("line_type").notNull(), description: text("description").notNull(), quantityMilli: integer("quantity_milli").notNull(), unit: text("unit").notNull(), unitPriceMinor: integer("unit_price_minor").notNull(), lineTotalMinor: integer("line_total_minor").notNull(), phase: text("phase").notNull().default("estimate"), createdAt: integer("created_at").notNull() });
+export const eventBudgetApprovals = sqliteTable("event_budget_approvals", { id: text("id").primaryKey(), eventOrderId: text("event_order_id").notNull().references(() => eventServiceOrders.id), requestedBy: text("requested_by").notNull().references(() => users.id), requestedAt: integer("requested_at").notNull(), status: text("status").notNull().default("pending"), decidedBy: text("decided_by").references(() => users.id), decidedAt: integer("decided_at"), note: text("note").notNull().default("") });
+
+export const accessZones = sqliteTable("access_zones", { id: text("id").primaryKey(), code: text("code").notNull().unique(), name: text("name").notNull(), controllerRef: text("controller_ref").notNull(), status: text("status").notNull().default("active") });
+export const visitorQrTokens = sqliteTable("visitor_qr_tokens", { id: text("id").primaryKey(), visitorId: text("visitor_id").notNull().references(() => visitorRegistrations.id, { onDelete: "cascade" }), tokenHash: text("token_hash").notNull().unique(), expiresAt: integer("expires_at").notNull(), redeemedAt: integer("redeemed_at"), redeemedBy: text("redeemed_by").references(() => users.id), createdBy: text("created_by").notNull().references(() => users.id), createdAt: integer("created_at").notNull() });
+export const badgePrintJobs = sqliteTable("badge_print_jobs", { id: text("id").primaryKey(), visitorId: text("visitor_id").notNull().references(() => visitorRegistrations.id), templateVersion: integer("template_version").notNull().default(1), printerRef: text("printer_ref").notNull(), status: text("status").notNull().default("queued"), isReprint: integer("is_reprint").notNull().default(0), reason: text("reason").notNull(), renderPayload: text("render_payload").notNull(), actorId: text("actor_id").notNull().references(() => users.id), createdAt: integer("created_at").notNull(), printedAt: integer("printed_at") });
+export const visitorAccessGrants = sqliteTable("visitor_access_grants", { id: text("id").primaryKey(), visitorId: text("visitor_id").notNull().references(() => visitorRegistrations.id), accessZoneId: text("access_zone_id").notNull().references(() => accessZones.id), validFrom: integer("valid_from").notNull(), validUntil: integer("valid_until").notNull(), status: text("status").notNull().default("pending"), controllerGrantRef: text("controller_grant_ref"), createdAt: integer("created_at").notNull(), revokedAt: integer("revoked_at") });
+export const accessControllerEvents = sqliteTable("access_controller_events", { id: text("id").primaryKey(), visitorId: text("visitor_id").notNull().references(() => visitorRegistrations.id), accessGrantId: text("access_grant_id").references(() => visitorAccessGrants.id), eventType: text("event_type").notNull(), controllerRef: text("controller_ref"), status: text("status").notNull(), reason: text("reason").notNull(), actorId: text("actor_id").notNull().references(() => users.id), createdAt: integer("created_at").notNull() });
+
+export const masterDataRecords = sqliteTable("master_data_records", { id: text("id").primaryKey(), entityType: text("entity_type").notNull(), recordKey: text("record_key").notNull(), version: integer("version").notNull(), status: text("status").notNull().default("draft"), ownerId: text("owner_id").notNull().references(() => users.id), effectiveFrom: integer("effective_from").notNull(), effectiveTo: integer("effective_to"), payload: text("payload").notNull(), reason: text("reason").notNull(), makerId: text("maker_id").notNull().references(() => users.id), checkerId: text("checker_id").references(() => users.id), decidedAt: integer("decided_at"), createdAt: integer("created_at").notNull() }, (table) => [uniqueIndex("master_data_record_version_unique").on(table.entityType, table.recordKey, table.version)]);
