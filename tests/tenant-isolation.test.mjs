@@ -6,7 +6,7 @@ import test from "node:test";
 async function migratedDatabase() {
   const database = new DatabaseSync(":memory:");
   database.exec("PRAGMA foreign_keys = ON");
-  for (const migration of ["0000_round_wrecker.sql", "0001_clumsy_black_crow.sql", "0002_stiff_moon_knight.sql", "0003_erp_access_routing.sql", "0004_brief_rockslide.sql", "0005_coordination_mvp.sql", "0006_coordination_demo_accounts.sql"]) {
+  for (const migration of ["0000_round_wrecker.sql", "0001_clumsy_black_crow.sql", "0002_stiff_moon_knight.sql", "0003_erp_access_routing.sql", "0004_brief_rockslide.sql", "0005_coordination_mvp.sql", "0006_coordination_demo_accounts.sql", "0007_p1_operational_reliability.sql"]) {
     const sql = await readFile(new URL(`../drizzle/${migration}`, import.meta.url), "utf8");
     database.exec(sql.replaceAll("--> statement-breakpoint", ""));
   }
@@ -66,4 +66,34 @@ test("coordination migration supports visitors, providers and catering orders", 
   assert.ok(tables.includes("event_service_orders"));
   assert.ok(database.prepare("PRAGMA table_info('maintenance_work_orders')").all().some(column=>column.name==="provider_id"));
   assert.ok(database.prepare("SELECT id FROM service_providers WHERE service_types LIKE '%catering%'").get());
+});
+
+test("P1 operational schema enforces anti-overlap and segregation of duties", async()=>{
+  const database=await migratedDatabase();
+  const tables=database.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(row=>row.name);
+  for(const name of ["operation_templates","work_order_tasks","sla_instances","sla_job_events","resource_profiles","resource_bookings","provider_assignments","access_reviews","configuration_changes"]) assert.ok(tables.includes(name),name);
+  database.prepare("INSERT INTO service_drafts (id,owner_id,service_type,title,details,status,version,confirmed_version,created_at,updated_at) VALUES ('p1-draft','demo-tenant-001','support','P1','P1','submitted',1,1,1,1)").run();
+  database.prepare("INSERT INTO service_requests (id,draft_id,owner_id,organization,service_type,title,details,status,target_department,requester_role,visibility,idempotency_key,created_at,updated_at) VALUES ('p1-request','p1-draft','demo-tenant-001','Innovate Vietnam','support','P1','P1','in_progress','facility','customer_admin','organization','p1-key',1,1)").run();
+  database.prepare("INSERT INTO maintenance_work_orders (id,request_id,title,location,priority,status,created_by,created_at,updated_at) VALUES ('p1-wo','p1-request','P1','NIC','high','open','demo-facility-001',1,1)").run();
+  database.prepare("INSERT INTO resource_profiles (id,user_id,location,working_windows,status) VALUES ('resource-1','demo-facility-001','NIC','[]','active')").run();
+  database.prepare("INSERT INTO resource_bookings (id,resource_id,work_order_id,starts_at,ends_at,status,created_at) VALUES ('rb-1','resource-1','p1-wo',100,200,'confirmed',1)").run();
+  assert.throws(()=>database.prepare("INSERT INTO resource_bookings (id,resource_id,work_order_id,starts_at,ends_at,status,created_at) VALUES ('rb-2','resource-1','p1-wo',150,250,'confirmed',1)").run(),/RESOURCE_BOOKING_OVERLAP/);
+  assert.throws(()=>database.prepare("INSERT INTO configuration_changes (id,entity_type,entity_id,payload,reason,maker_id,status,checker_id,created_at) VALUES ('change-1','role','x','{}','test','demo-facility-001','approved','demo-facility-001',1)").run(),/CHECK/);
+  assert.equal(database.prepare("SELECT status FROM operation_templates WHERE id='template-support-v1'").get().status,"active");
+  assert.equal(database.prepare("SELECT count(*) AS count FROM operation_template_tasks WHERE template_id='template-support-v1'").get().count,3);
+  assert.equal(database.prepare("SELECT role FROM users WHERE id='demo-system-admin-001'").get().role,"system_admin");
+  assert.equal(database.prepare("SELECT provider_id AS providerId FROM provider_memberships WHERE user_id='demo-provider-001'").get().providerId,"provider-building-mvp");
+  assert.ok(tables.includes("notifications"));
+});
+
+test("provider response history versions and notification dedupe are unique",async()=>{
+  const database=await migratedDatabase();
+  database.prepare("INSERT INTO service_drafts (id,owner_id,service_type,title,details,status,version,confirmed_version,created_at,updated_at) VALUES ('provider-draft','demo-tenant-001','support','Provider','Provider','submitted',1,1,1,1)").run();
+  database.prepare("INSERT INTO service_requests (id,draft_id,owner_id,organization,service_type,title,details,status,target_department,requester_role,visibility,idempotency_key,created_at,updated_at) VALUES ('provider-request','provider-draft','demo-tenant-001','Innovate Vietnam','support','Provider','Provider','in_progress','facility','customer_admin','organization','provider-key',1,1)").run();
+  database.prepare("INSERT INTO maintenance_work_orders (id,request_id,title,location,priority,status,provider_id,created_by,created_at,updated_at) VALUES ('provider-wo','provider-request','Provider WO','NIC','high','open','provider-building-mvp','demo-facility-001',1,1)").run();
+  database.prepare("INSERT INTO provider_assignments (id,work_order_id,provider_id,version,status,response_deadline) VALUES ('assignment-1','provider-wo','provider-building-mvp',1,'awaiting_provider',100)").run();
+  database.prepare("INSERT INTO provider_assignment_responses (id,assignment_id,version,response,note,actor_id,created_at) VALUES ('response-1','assignment-1',2,'accept','ok','demo-provider-001',1)").run();
+  assert.throws(()=>database.prepare("INSERT INTO provider_assignment_responses (id,assignment_id,version,response,note,actor_id,created_at) VALUES ('response-2','assignment-1',2,'reject','duplicate','demo-provider-001',2)").run(),/UNIQUE/);
+  database.prepare("INSERT INTO notifications (id,recipient_id,type,entity_type,entity_id,dedupe_key,title,body,created_at) VALUES ('notice-1','demo-provider-001','provider_assignment','provider_assignment','assignment-1','dedupe-1','New','Body',1)").run();
+  assert.throws(()=>database.prepare("INSERT INTO notifications (id,recipient_id,type,entity_type,entity_id,dedupe_key,title,body,created_at) VALUES ('notice-2','demo-provider-001','provider_assignment','provider_assignment','assignment-1','dedupe-1','New','Body',1)").run(),/UNIQUE/);
 });

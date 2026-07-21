@@ -70,6 +70,19 @@ Máy mới cần tạo `.env.local` từ `.env.example`; không sao chép secret
 
 ## Nhật ký bàn giao
 
+### 2026-07-21 - Hoàn thành P1 độ tin cậy vận hành từ Kanban #1–#5
+
+- Thêm migration `0007` cho operation template/task, phê duyệt đóng work order, business calendar/SLA event, resource skill/calendar, provider response version, access review và maker-checker.
+- Work order snapshot task từ template active; task bắt buộc chặn đóng. Đóng lệnh chuyển sang approval và cấm người yêu cầu tự phê duyệt.
+- Resource booking kiểm tra skill/certificate còn hạn và dùng database trigger chống trùng. Provider chỉ phản hồi assignment thuộc membership, có accept/reject/accept-with-change và response history.
+- Thêm SLA pause/resume có audit, cron sweep dùng `SLA_CRON_SECRET`, idempotency key cho warning/failure và xử lý provider response quá hạn.
+- Access review retain/revoke lưu evidence; revoke membership đồng thời thu hồi session. Cấu hình role/SLA/master data áp dụng segregation of duties ở API và database.
+- Thêm `/portal/reliability` cho Facility Manager, Provider và System Admin: theo dõi SLA/job log/notification, pause-resume, acknowledgment/confirmation, resource skills, template version và access review.
+- Work order tự sinh task/SLA/provider assignment; cron tạo notification in-app idempotent và escalation access review quá hạn. Migration seed lịch NIC, template, resource skill cùng tài khoản demo admin/provider.
+- Tài liệu endpoint và cấu hình vận hành: `docs/P1_OPERATIONAL_RELIABILITY.md`.
+- Đã áp migration local, chạy `npm run lint` và `npm test`: 30 unit/integration test + rendered HTML đạt, build thành công.
+- Việc tiếp theo: cấu hình `SLA_CRON_SECRET` và lịch gọi cron trên môi trường triển khai; theo dõi dữ liệu production để tinh chỉnh ngưỡng SLA.
+
 ### 2026-07-21 - MVP điều phối visitor, provider, catering và event logistics
 
 - Thêm `service_providers`, `visitor_registrations`, `event_service_orders` và liên kết provider trên maintenance work order qua migration `0005`; migration `0006` thêm tài khoản demo Event/Security.
