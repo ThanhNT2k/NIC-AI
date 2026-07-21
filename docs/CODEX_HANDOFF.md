@@ -68,6 +68,15 @@ Máy mới cần tạo `.env.local` từ `.env.example`; không sao chép secret
 
 ## Nhật ký bàn giao
 
+### 2026-07-21 - Hội tụ Supabase RLS cho request và trao đổi
+
+- Thêm migration PostgreSQL `202607210012_request_collaboration.sql` cho `service_requests` và `request_comments`, liên kết với `request_drafts`, `auth.users` và `organizations`; bổ sung unique idempotency theo owner cùng index owner/team/comment timeline.
+- Đồng bộ role `service_desk` vào constraint membership Supabase và thêm hàm scope đọc theo owner, assigned user, organization admin hoặc đúng operational team.
+- Bật và ép buộc RLS cho cả hai bảng; comment kế thừa scope từ request cha. Thu hồi `insert/update/delete` trực tiếp của `anon` và `authenticated` để mọi mutation chính thức tiếp tục đi qua backend authorization, CSRF, validation và audit.
+- Cập nhật tài liệu data security và regression test bảo vệ RLS, tenant/team scope và client-write revocation.
+- Kiểm tra: `npm.cmd run lint` đạt; `npm.cmd test` đạt 58 unit/integration test, production build và rendered HTML test.
+- Chưa chạy JWT/RLS integration trên Supabase project thật vì repository không chứa local Supabase runtime/credential. Bước tiếp theo: áp migration trên staging và kiểm thử hai JWT khác tenant; sau đó thêm attachment storage có content-type/size/malware validation và browser E2E customer ↔ operator ↔ notification.
+
 ### 2026-07-21 - Sprint cộng tác và vòng đời “Yêu cầu của tôi”
 
 - Thêm migration D1 `0011_request_collaboration.sql` và schema `request_comments`, liên kết comment với request/actor bằng foreign key và index theo request-thời gian.

@@ -75,6 +75,22 @@ test("request collaboration enforces scoped reads, CSRF, rate limit and audited 
   assert.match(migration, /REFERENCES `service_requests`/);
 });
 
+test("Supabase request collaboration forces tenant RLS and keeps client writes revoked", async () => {
+  const migration = await readFile(new URL("../supabase/migrations/202607210012_request_collaboration.sql", import.meta.url), "utf8");
+  for (const table of ["service_requests", "request_comments"]) {
+    assert.match(migration, new RegExp(`alter table public\\.${table} enable row level security`));
+    assert.match(migration, new RegExp(`alter table public\\.${table} force row level security`));
+  }
+  assert.match(migration, /request_owner = \(select auth\.uid\(\)\)/);
+  assert.match(migration, /membership\.organization_id = request_organization/);
+  assert.match(migration, /request_department = 'service_desk'/);
+  assert.match(migration, /request_department = 'facility'/);
+  assert.match(migration, /request_department = 'event'/);
+  assert.match(migration, /request_department = 'security'/);
+  assert.match(migration, /request\.id = request_id/);
+  assert.match(migration, /revoke insert,update,delete on public\.service_requests,public\.request_comments from anon,authenticated/);
+});
+
 test("ERP roles grant capabilities instead of trusting UI role labels", async () => {
   const access = await readFile(new URL("../lib/access-control.ts", import.meta.url), "utf8");
   const auth = await readFile(new URL("../lib/d1-auth.ts", import.meta.url), "utf8");

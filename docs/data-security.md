@@ -2,9 +2,8 @@
 
 ## 1. Mô hình dữ liệu mục tiêu
 
-Migration hiện tại đã có `request_drafts`, `knowledge_chunks` và `audit_logs`. Trước production cần bổ sung ít nhất:
+Migration hiện tại đã có `request_drafts`, `service_requests`, `request_comments`, `knowledge_chunks` và `audit_logs`. Trước production cần bổ sung ít nhất:
 
-- `requests`: bản ghi chính thức, bất biến đối với dữ liệu đã duyệt hoặc có revision rõ ràng.
 - `request_status_events`: lịch sử chuyển trạng thái.
 - `knowledge_documents`: metadata cấp tài liệu và versioning.
 - Cấu trúc tenant/membership nếu NIC phục vụ nhiều đơn vị có vùng dữ liệu riêng.
@@ -20,6 +19,8 @@ RLS là defense-in-depth, không thay thế authorization tại service layer.
 - Knowledge được lọc theo access scope và tenant.
 - Client không có quyền insert/update/delete audit log.
 - Các bảng mới MUST bật RLS trước khi cấp quyền.
+
+`service_requests` và `request_comments` dùng RLS bắt buộc theo owner, organization, assigned user và operational team. Quyền ghi trực tiếp của role `anon`/`authenticated` bị thu hồi; mutation phải đi qua backend sau khi kiểm tra capability, CSRF, trạng thái và ghi audit.
 
 Migration hiện tại cho phép update với `with check owner_id = auth.uid()` nhưng enforcement version/confirmation vẫn cần transaction/function phía server. Cần có integration tests chạy với JWT của ít nhất hai user để chứng minh không rò rỉ chéo.
 
@@ -62,4 +63,3 @@ Mỗi event SHOULD có actor, action, entity, timestamp, request/correlation ID,
 - Automated authorization/RLS/integration tests.
 - Threat-model review cho mọi route/tool mới có side effect.
 - Kiểm thử rate limit, malformed input, replay/idempotency và logging redaction.
-
