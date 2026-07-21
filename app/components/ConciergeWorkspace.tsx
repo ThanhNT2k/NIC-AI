@@ -2,12 +2,15 @@
 
 import { ComponentProps, FormEvent, useEffect, useState } from "react";
 import NextImage from "next/image";
+import { PortalHeader } from "./PortalHeader";
 
 type User = { id: string; email: string; fullName: string; organization: string; role: string; departmentCode?: string | null; capabilities?: string[] };
 type Service = { code: string; type: string; title: string; copy: string; action: string };
 type Draft = { id: string; version: number; confirmedVersion: number | null; status: string };
 type ApiPayload = { error?: string; user?: User; draft?: Draft; request?: { id: string } };
 type PortalView = "home" | "requests" | "bookings" | "help";
+type PortalRequest = { id:string;title:string;status:string;createdAt:number;updatedAt:number|null };
+type PortalBooking = { id:string;title:string;startsAt:number;endsAt:number;spaceName:string;status:string };
 type ChatMessage = { role: "user" | "assistant"; text: string; sources?: string[]; suggestedService?: string };
 type ServiceField = { name: string; label: string; type?: "text" | "date" | "time" | "number" | "tel"; placeholder?: string; min?: string; options?: string[] };
 type ServiceForm = { eyebrow: string; detailsLabel: string; detailsPlaceholder: string; fields: ServiceField[] };
@@ -88,11 +91,8 @@ function ServiceRegistrationFields({ service }: { service: Service }) {
   </>;
 }
 
-const requests = [
-  { id: "REQ-0712", title: "Hỗ trợ thiết bị cho workshop", status: "Đang xử lý", meta: "Cập nhật 12 phút trước", step: 2 },
-  { id: "BKG-0685", title: "Phòng họp 3.2", status: "Đã xác nhận", meta: "29/07/2026, 09:00", step: 3 },
-  { id: "REQ-0709", title: "Cấp thẻ cho thành viên mới", status: "Cần bổ sung", meta: "Phản hồi trước 17:00 hôm nay", step: 1 },
-];
+const requestStatusLabels:Record<string,string>={submitted:"Đã tiếp nhận",triaged:"Đã phân loại",in_progress:"Đang xử lý",waiting_customer:"Cần bổ sung",resolved:"Đã hoàn tất",cancelled:"Đã hủy"};
+const requestSteps:Record<string,number>={submitted:1,triaged:1,in_progress:2,waiting_customer:2,resolved:3,cancelled:3};
 
 function csrfHeaders(extra: Record<string, string> = {}) {
   const token = document.cookie.split(";").map(value => value.trim()).find(value => value.startsWith("nic_csrf="))?.slice("nic_csrf=".length) ?? "";
@@ -105,21 +105,13 @@ async function readApiPayload(response: Response): Promise<ApiPayload> {
   try { return JSON.parse(body) as ApiPayload; } catch { return {}; }
 }
 
-const portalNav: Array<{ view: PortalView; label: string; href: string }> = [
-  { view: "home", label: "Trang chủ", href: "/portal" },
-  { view: "requests", label: "Yêu cầu của tôi", href: "/portal/requests" },
-  { view: "bookings", label: "Lịch & đặt chỗ", href: "/portal/bookings" },
-  { view: "coordination", label: "Khách & sự kiện", href: "/portal/coordination" },
-  { view: "help", label: "Trung tâm trợ giúp", href: "/portal/help" },
-];
-
 function PortalSection({ view, user, onCopilot }: { view: Exclude<PortalView, "home">; user: User; onCopilot: () => void }) {
   const content = {
     requests: { eyebrow: "THEO DÕI DỊCH VỤ", title: "Yêu cầu của tôi", copy: "Xem trạng thái, phản hồi và các bước cần hoàn tất cho mọi yêu cầu đã gửi." },
     bookings: { eyebrow: "KHÔNG GIAN NIC", title: "Lịch & đặt chỗ", copy: "Khám phá không gian phù hợp và chuẩn bị yêu cầu đặt chỗ theo lịch của bạn." },
     help: { eyebrow: "TRI THỨC VẬN HÀNH", title: "Trung tâm trợ giúp", copy: "Tìm quy trình, chính sách và câu trả lời được kiểm chứng trước khi tạo yêu cầu." },
   }[view];
-  return <main className="portal-shell"><header className="portal-header"><a className="brand-lockup" href="/portal"><Image src="/nic-logo.png" alt="Vietnam National Innovation Center" width={142} height={54} priority /><span><strong>Service Hub</strong><small>Dịch vụ tại NIC</small></span></a><nav className="portal-nav" aria-label="Điều hướng chính">{portalNav.map(item => <a key={item.view} className={view === item.view ? "active" : ""} href={item.href}>{item.label}</a>)}</nav><div className="header-actions"><button className="copilot-header-button" onClick={onCopilot}>NIC Copilot</button><span className="profile-avatar">{user.fullName.slice(0, 2).toUpperCase()}</span></div></header><section className="portal-page"><header className="portal-page-heading"><span>{content.eyebrow}</span><h1>{content.title}</h1><p>{content.copy}</p></header>{view === "requests" && <div className="page-panel"><div className="filter-row"><button className="active">Tất cả</button><button>Đang xử lý</button><button>Cần bổ sung</button><a href="/portal">Tạo yêu cầu mới</a></div><div className="request-table">{requests.map(request => <article key={request.id}><div><span>{request.id}</span><strong>{request.title}</strong><small>{request.meta}</small></div><b className={`request-status step-${request.step}`}>{request.status}</b><button>Xem chi tiết</button></article>)}</div></div>}{view === "bookings" && <div className="space-catalog">{[
+  return <main className="portal-shell"><PortalHeader active={view} user={user}/><section className="portal-page"><header className="portal-page-heading"><span>{content.eyebrow}</span><h1>{content.title}</h1><p>{content.copy}</p></header>{view === "requests" && null}{view === "bookings" && <div className="space-catalog">{[
     ["Phòng hội thảo 2.1", "80 người", "Trống từ 13:30", "Màn hình LED · Âm thanh"],
     ["Phòng họp 3.2", "12 người", "Trống từ 15:00", "Họp trực tuyến · Bảng viết"],
     ["Innovation Hall", "250 người", "Còn 2 khung giờ", "Sự kiện · Trưng bày"],
@@ -160,13 +152,17 @@ export function ConciergeWorkspace({ view = "home" }: { view?: PortalView }) {
   const [draftError, setDraftError] = useState(false);
   const [draftPending, setDraftPending] = useState(false);
   const [activeDraft, setActiveDraft] = useState<Draft | null>(null);
+  const [recentRequests,setRecentRequests]=useState<PortalRequest[]>([]);
+  const [upcomingBookings,setUpcomingBookings]=useState<PortalBooking[]>([]);
+  const [homeDataLoading,setHomeDataLoading]=useState(true);
+  const [homeDataError,setHomeDataError]=useState("");
 
   useEffect(() => { fetch("/api/auth/session").then(async response => { if (response.ok) setUser((await response.json()).user); }).finally(() => setAuthChecked(true)); }, []);
   useEffect(() => { if (authChecked && !user) window.location.replace("/auth"); }, [authChecked, user]);
+  useEffect(()=>{if(!user||view!=="home")return;let mounted=true;Promise.all([fetch("/api/requests",{headers:{Accept:"application/json"}}),fetch("/api/bookings",{headers:{Accept:"application/json"}})]).then(async([requestResponse,bookingResponse])=>{if(requestResponse.status===401||bookingResponse.status===401){location.href="/auth";return;}const[requestData,bookingData]=await Promise.all([requestResponse.json(),bookingResponse.json()]) as [{requests?:PortalRequest[]},{bookings?:PortalBooking[]}];if(!requestResponse.ok||!bookingResponse.ok)throw new Error("HOME_DATA_FAILED");if(!mounted)return;const now=Math.floor(Date.now()/1000);setRecentRequests((requestData.requests??[]).slice(0,3));setUpcomingBookings((bookingData.bookings??[]).filter(item=>item.status==="confirmed"&&item.endsAt>=now).sort((left,right)=>left.startsAt-right.startsAt));setHomeDataError("");}).catch(()=>{if(mounted)setHomeDataError("Chưa thể tải hoạt động mới nhất. Vui lòng thử lại sau.");}).finally(()=>{if(mounted)setHomeDataLoading(false);});return()=>{mounted=false;};},[user,view]);
   if (!authChecked) return <main className="auth-loading" aria-label="Đang kiểm tra phiên đăng nhập"><span>NIC</span><p>Đang chuẩn bị không gian của bạn...</p></main>;
   if (!user) return <main className="auth-loading"><span>NIC</span><p>Đang chuyển đến trang đăng nhập...</p></main>;
 
-  async function logout() { await fetch("/api/auth/logout", { method: "POST", headers: csrfHeaders() }); setUser(null); }
   async function revokeAllSessions() { if (!window.confirm("Đăng xuất tài khoản này trên tất cả thiết bị?")) return; await fetch("/api/auth/revoke-all", { method: "POST", headers: csrfHeaders() }); setUser(null); }
   async function createDraft(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); if (!selectedService) return;
@@ -197,20 +193,16 @@ export function ConciergeWorkspace({ view = "home" }: { view?: PortalView }) {
   if (view !== "home") return <><PortalSection view={view} user={user} onCopilot={() => setCopilotOpen(true)} /><CopilotDrawer open={copilotOpen} onClose={() => setCopilotOpen(false)} onSelectService={() => { window.location.href = "/portal"; }} /></>;
   return <main className="portal-shell">
     <a className="skip-link" href="#main-content">Đi đến nội dung chính</a>
-    <header className="portal-header">
-      <a className="brand-lockup" href="#main-content" aria-label="NIC Service Hub, trang chủ"><Image src="/nic-logo.png" alt="Vietnam National Innovation Center" width={142} height={54} priority /><span><strong>Service Hub</strong><small>Dịch vụ tại NIC</small></span></a>
-      <nav className="portal-nav" aria-label="Điều hướng chính">{portalNav.map(item => <a key={item.view} className={item.view === "home" ? "active" : ""} href={item.href}>{item.label}</a>)}</nav>
-      <div className="header-actions"><button className="notification-button" aria-label="Thông báo, có 2 thông báo mới">2</button><button className="profile-button" onClick={logout} title="Đăng xuất"><span>{user.fullName.split(" ").slice(-1)[0].slice(0,2).toUpperCase()}</span><span><strong>{user.fullName}</strong><small>{roleLabels[user.role] ?? user.role} · {user.organization}</small></span></button></div>
-    </header>
+    <PortalHeader active="home" user={user}/>
     <section id="main-content" className="portal-content">
       <section className="welcome-grid">
-        <div className="welcome-copy"><p className="date-label">Thứ Hai, 20 tháng 7</p><h1>Chào buổi sáng, {user.fullName.split(" ").slice(-1)[0]}.</h1><p>Bạn cần NIC hỗ trợ việc gì hôm nay?</p><label className="service-search"><span aria-hidden="true">⌕</span><input aria-label="Tìm dịch vụ hoặc hướng dẫn" placeholder="Tìm dịch vụ, không gian hoặc hướng dẫn..." /><kbd>Ctrl K</kbd></label></div>
-        <aside className="next-event"><div className="event-date"><strong>25</strong><span>THÁNG 7</span></div><div><span className="event-label">Lịch sắp tới</span><h2>Workshop đổi mới sáng tạo</h2><p>14:00 - 16:30, Phòng hội thảo 2.1</p></div><button aria-label="Xem chi tiết Workshop đổi mới sáng tạo">→</button></aside>
+        <div className="welcome-copy"><p className="date-label">{new Intl.DateTimeFormat("vi-VN",{weekday:"long",day:"numeric",month:"long"}).format(new Date())}</p><h1>Chào buổi sáng, {user.fullName.split(" ").slice(-1)[0]}.</h1><p>Bạn cần NIC hỗ trợ việc gì hôm nay?</p><label className="service-search"><span aria-hidden="true">⌕</span><input aria-label="Tìm dịch vụ hoặc hướng dẫn" placeholder="Tìm dịch vụ, không gian hoặc hướng dẫn..." /><kbd>Ctrl K</kbd></label></div>
+        {upcomingBookings[0]?<aside className="next-event"><div className="event-date"><strong>{new Date(upcomingBookings[0].startsAt*1000).getDate()}</strong><span>THÁNG {new Date(upcomingBookings[0].startsAt*1000).getMonth()+1}</span></div><div><span className="event-label">Lịch sắp tới</span><h2>{upcomingBookings[0].title}</h2><p>{new Date(upcomingBookings[0].startsAt*1000).toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"})} - {new Date(upcomingBookings[0].endsAt*1000).toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"})}, {upcomingBookings[0].spaceName}</p></div><a href="/portal/bookings" aria-label={`Mở lịch ${upcomingBookings[0].title}`}>→</a></aside>:<aside className="next-event empty"><div><span className="event-label">Lịch sắp tới</span><h2>{homeDataLoading?"Đang tải lịch...":"Chưa có lịch đã xác nhận"}</h2><p>Kiểm tra không gian khả dụng và tạo booking mới.</p></div><a href="/portal/bookings">Mở lịch</a></aside>}
       </section>
       <section className="customer-scope" aria-label="Quyền của tài khoản"><div><span>PHẠM VI TÀI KHOẢN</span><strong>{roleLabels[user.role] ?? user.role}</strong></div><p>Bạn có thể tạo yêu cầu, đặt không gian, đăng ký khách và theo dõi dữ liệu thuộc phạm vi {user.role.includes("admin") ? "doanh nghiệp" : "cá nhân"}. Mỗi yêu cầu sẽ được chuyển đến đúng đội vận hành NIC.</p><a href="/portal/requests">Xem yêu cầu được phép truy cập</a></section>
       <section className="services-section" aria-labelledby="services-title"><div className="section-heading"><div><h2 id="services-title">Dịch vụ thường dùng</h2><p>Bắt đầu nhanh với các tác vụ phổ biến tại NIC.</p></div><button>Xem tất cả dịch vụ</button></div><div className="service-grid">{services.map(service => <article className="service-card" key={service.code}><span className="service-code">{service.code}</span><div><h3>{service.title}</h3><p>{service.copy}</p></div><button onClick={() => { setSelectedService(service); setDraftMessage(""); setActiveDraft(null); }}>{service.action}<span aria-hidden="true">→</span></button></article>)}</div></section>
       <div className="activity-grid">
-        <section className="requests-panel" aria-labelledby="requests-title"><div className="section-heading"><div><h2 id="requests-title">Yêu cầu gần đây</h2><p>Theo dõi tiến độ những việc bạn đã gửi.</p></div><button>Xem tất cả</button></div><div className="request-list">{requests.map(request => <article className="request-item" key={request.id}><div className="request-main"><span>{request.id}</span><strong>{request.title}</strong><small>{request.meta}</small></div><div className="request-progress" aria-label={`Tiến độ ${request.step} trên 3 bước`}>{[1,2,3].map(step => <i key={step} className={step <= request.step ? "done" : ""} />)}</div><b className={`request-status step-${request.step}`}>{request.status}</b><button aria-label={`Mở ${request.title}`}>→</button></article>)}</div></section>
+        <section className="requests-panel" aria-labelledby="requests-title"><div className="section-heading"><div><h2 id="requests-title">Yêu cầu gần đây</h2><p>Theo dõi tiến độ những việc bạn đã gửi.</p></div><a href="/portal/requests">Xem tất cả</a></div>{homeDataError?<p className="portal-inline-state" role="alert">{homeDataError}</p>:homeDataLoading?<div className="portal-inline-state" aria-busy="true">Đang tải yêu cầu...</div>:recentRequests.length===0?<div className="portal-inline-state"><strong>Chưa có yêu cầu chính thức.</strong><a href="#services-title">Bắt đầu từ một dịch vụ</a></div>:<div className="request-list">{recentRequests.map(request=>{const step=requestSteps[request.status]??1;return <article className="request-item" key={request.id}><div className="request-main"><span>{request.id}</span><strong>{request.title}</strong><small>Cập nhật {new Date((request.updatedAt??request.createdAt)*1000).toLocaleString("vi-VN")}</small></div><div className="request-progress" aria-label={`Tiến độ ${step} trên 3 bước`}>{[1,2,3].map(value=><i key={value} className={value<=step?"done":""}/>)}</div><b className={`request-status step-${step}`}>{requestStatusLabels[request.status]??request.status}</b><a className="request-open" href="/portal/requests" aria-label={`Mở ${request.title}`}>→</a></article>;})}</div>}</section>
         <aside className="help-panel"><span className="ai-mark">AI</span><div><h2>Hỏi NIC Copilot</h2><p>Tìm chính sách, kiểm tra thông tin hoặc chuẩn bị một bản nháp yêu cầu.</p></div><div className="prompt-list"><button>Phòng nào còn trống chiều nay?</button><button>Quy trình đăng ký khách ra sao?</button></div><button className="primary-action" onClick={() => setCopilotOpen(true)}>Bắt đầu trao đổi <span aria-hidden="true">→</span></button><small>Copilot chỉ chuẩn bị. Bạn luôn là người kiểm tra và quyết định gửi.</small></aside>
       </div>
       <footer className="scope-note"><span>i</span><p>Bạn đang sử dụng dịch vụ trong phạm vi <strong>{user.organization} tại NIC Hòa Lạc</strong>.</p><button onClick={revokeAllSessions}>Đăng xuất mọi thiết bị</button></footer>

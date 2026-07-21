@@ -68,6 +68,14 @@ Máy mới cần tạo `.env.local` từ `.env.example`; không sao chép secret
 
 ## Nhật ký bàn giao
 
+### 2026-07-21 - Dữ liệu thật và header dùng chung cho portal
+
+- Trang chủ `/portal` tải yêu cầu gần đây từ `/api/requests` và lịch sắp tới từ `/api/bookings`; đã loại bỏ các mã yêu cầu, phòng và workshop minh họa khỏi dashboard.
+- Thêm `PortalHeader` làm header xác thực dùng chung cho toàn bộ route `/portal`, với cùng logo, navigation, trạng thái active, danh tính tài khoản và menu phiên đăng nhập.
+- Thêm `/api/notifications`: chỉ đọc thông báo có `recipient_id` là người dùng hiện tại; thao tác đánh dấu tất cả đã đọc yêu cầu CSRF, giới hạn theo owner và ghi audit.
+- Nút thông báo mở popover có loading/empty/list state; mỗi mục điều hướng đến phân hệ liên quan. Lịch và yêu cầu trên trang chủ đều có liên kết truy cập trang đầy đủ.
+- Kiểm tra: `npm run lint` đạt; `npm test` đạt 54 unit/integration test, production build và rendered HTML test. Browser local chưa chạy được do chính sách trình duyệt hiện tại chặn `http://localhost:3000`, không phải lỗi ứng dụng.
+
 ### 2026-07-21 - Sửa lỗi tải và submit trang điều phối
 
 - Sửa `/portal/coordination` trả HTTP 500 khi render lần đầu: component trả loading shell trước khi truy cập danh sách trên dữ liệu API chưa tải.

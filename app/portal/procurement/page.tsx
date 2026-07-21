@@ -1,2 +1,3 @@
 import { ProcurementCenter } from "../../components/ProcurementCenter";
-export default function ProcurementPage(){return <ProcurementCenter/>}
+import { PortalHeader } from "../../components/PortalHeader";
+export default function ProcurementPage(){return <><PortalHeader/><ProcurementCenter/></>}

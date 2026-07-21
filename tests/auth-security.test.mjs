@@ -113,7 +113,7 @@ test("common services expose dedicated registration fields", async () => {
 
 test("public home routes authentication and portal navigation explicitly", async () => {
   const home = await readFile(new URL("../app/components/PublicHome.tsx", import.meta.url), "utf8");
-  const portal = await readFile(new URL("../app/components/ConciergeWorkspace.tsx", import.meta.url), "utf8");
+  const portal = await readFile(new URL("../app/components/PortalHeader.tsx", import.meta.url), "utf8");
   assert.match(home, /href="\/auth"/);
   assert.match(home, /href="\/auth\?mode=register"/);
   for (const route of ["/portal/requests", "/portal/bookings", "/portal/help"]) assert.match(portal, new RegExp(route));
@@ -195,4 +195,24 @@ test("coordination portal guards initial data and async form lifetime",async()=>
   assert.match(createSource,/formElement\.reset\(\)/);
   assert.doesNotMatch(createSource,/event\.currentTarget\.reset\(\)/);
   assert.match(createSource,/finally\{setPending\(false\);\}/);
+});
+
+test("portal home uses live activity and every portal route shares the authenticated header",async()=>{
+  const workspace=await readFile(new URL("../app/components/ConciergeWorkspace.tsx",import.meta.url),"utf8");
+  const header=await readFile(new URL("../app/components/PortalHeader.tsx",import.meta.url),"utf8");
+  const notifications=await readFile(new URL("../app/api/notifications/route.ts",import.meta.url),"utf8");
+  assert.match(workspace,/fetch\("\/api\/requests"/);
+  assert.match(workspace,/fetch\("\/api\/bookings"/);
+  assert.doesNotMatch(workspace,/Workshop đổi mới sáng tạo|REQ-0712|BKG-0685/);
+  for(const route of ["/portal","/portal/requests","/portal/bookings","/portal/coordination","/portal/help"])assert.match(header,new RegExp(route.replaceAll("/","\\/")));
+  assert.match(header,/notification-menu/);
+  assert.match(header,/aria-label=\{`Thông báo/);
+  assert.match(notifications,/currentUser\(request\)/);
+  assert.match(notifications,/WHERE recipient_id=\?/);
+  assert.match(notifications,/requireCsrf\(request\)/);
+  assert.match(notifications,/status='read'.*recipient_id=\?/);
+  for(const page of ["bookings","requests","coordination","operations","reliability","portfolio","procurement","diagnostics"]){
+    const source=await readFile(new URL(`../app/portal/${page}/page.tsx`,import.meta.url),"utf8");
+    assert.match(source,/PortalHeader/);
+  }
 });

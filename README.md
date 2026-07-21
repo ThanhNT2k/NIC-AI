@@ -337,7 +337,7 @@ Operational accounts use the same test password:
 
 ## 7. Testing & Evaluation
 
-Current verified baseline: **48 automated tests passing** (47 unit/integration and 1 rendered-page test).
+Current verified baseline: **55 automated checks passing** (54 unit/integration and 1 rendered-page test).
 
 | Test area | Evidence |
 |---|---|
@@ -413,7 +413,7 @@ Before production completion, the project still requires an approved identity pr
 - Provider acknowledgment, SLA escalation and technician scheduling exist; a production provider connector and supplier self-service remain external integration work.
 - Catering packages, quantities and versioned price snapshots are structured; production supplier self-service and richer menu customization remain.
 - Visitor approval, one-time QR lifecycle, access zones and badge print jobs exist; production printer/controller adapters remain.
-- Request pages still contain some illustrative records.
+- Help-center article summaries remain illustrative until the editorial knowledge workflow is connected.
 - Copilot uses ranked database retrieval; hybrid/vector ranking and a hand-labeled evaluation suite remain.
 - Production Gemini secret is not configured.
 

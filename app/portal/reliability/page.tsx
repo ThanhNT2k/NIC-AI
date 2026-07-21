@@ -1,2 +1,3 @@
 import { ReliabilityCenter } from "../../components/ReliabilityCenter";
-export default function ReliabilityPage(){return <ReliabilityCenter/>;}
+import { PortalHeader } from "../../components/PortalHeader";
+export default function ReliabilityPage(){return <><PortalHeader/><ReliabilityCenter/></>;}
