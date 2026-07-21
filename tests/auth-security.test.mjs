@@ -58,13 +58,14 @@ test("official request reads remain tenant and owner scoped", async () => {
 
 test("request collaboration enforces scoped reads, CSRF, rate limit and audited cancellation", async () => {
   const route = await readFile(new URL("../app/api/requests/[id]/route.ts", import.meta.url), "utf8");
+  const scope = await readFile(new URL("../lib/request-scope.ts", import.meta.url), "utf8");
   const migration = await readFile(new URL("../drizzle/0011_request_collaboration.sql", import.meta.url), "utf8");
   assert.match(route, /currentUser\(request\)/);
   assert.match(route, /requireCsrf\(request\)/);
   assert.match(route, /enforceRateLimit/);
   assert.match(route, /item\.ownerId === user\.id/);
-  assert.match(route, /request:read:organization/);
-  assert.match(route, /request:read:assigned_team/);
+  assert.match(scope, /request:read:organization/);
+  assert.match(scope, /request:read:assigned_team/);
   assert.match(route, /canCommentRequest/);
   assert.match(route, /COMMENT_FORBIDDEN/);
   assert.match(route, /request\.comment_added/);
@@ -73,6 +74,27 @@ test("request collaboration enforces scoped reads, CSRF, rate limit and audited 
   assert.match(route, /recipient_id/);
   assert.match(migration, /request_comments/);
   assert.match(migration, /REFERENCES `service_requests`/);
+});
+
+test("request attachments use private R2 with validation, scoped download and audit", async () => {
+  const upload = await readFile(new URL("../app/api/requests/[id]/attachments/route.ts", import.meta.url), "utf8");
+  const download = await readFile(new URL("../app/api/requests/[id]/attachments/[attachmentId]/route.ts", import.meta.url), "utf8");
+  const migration = await readFile(new URL("../drizzle/0012_request_attachments.sql", import.meta.url), "utf8");
+  const rls = await readFile(new URL("../supabase/migrations/202607210013_request_attachments.sql", import.meta.url), "utf8");
+  assert.match(upload,/requireCsrf\(request\)/);
+  assert.match(upload,/enforceRateLimit/);
+  assert.match(upload,/validateAttachment/);
+  assert.match(upload,/storage\.delete\(objectKey\)/);
+  assert.match(upload,/request\.attachment_uploaded/);
+  assert.match(download,/canReadRequest\(user, item\)/);
+  assert.match(download,/Cache-Control": "private, no-store/);
+  assert.match(download,/X-Content-Type-Options": "nosniff/);
+  assert.match(download,/Content-Security-Policy": "sandbox/);
+  assert.match(migration,/REFERENCES `service_requests`/);
+  assert.match(migration,/CHECK \(`size_bytes` BETWEEN 1 AND 8388608\)/);
+  assert.match(rls,/alter table public\.request_attachments force row level security/);
+  assert.match(rls,/can_read_service_request/);
+  assert.match(rls,/revoke insert,update,delete on public\.request_attachments from anon,authenticated/);
 });
 
 test("Supabase request collaboration forces tenant RLS and keeps client writes revoked", async () => {

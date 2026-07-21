@@ -1,6 +1,6 @@
-import { can } from "@/lib/access-control";
 import { currentUser, database, enforceRateLimit, requireCsrf, type SessionUser } from "@/lib/d1-auth";
 import { canCustomerCancelRequest } from "@/lib/operations-policy";
+import { canCommentRequest, canReadRequest } from "@/lib/request-scope";
 
 type RequestRow = {
   id: string;
@@ -15,18 +15,6 @@ type RequestRow = {
   createdAt: number;
   updatedAt: number;
 };
-
-function canReadRequest(user: SessionUser, item: RequestRow) {
-  if (item.ownerId === user.id && item.organization === user.organization) return true;
-  if (can(user.role, "request:read:organization") && item.organization === user.organization) return true;
-  return can(user.role, "request:read:assigned_team") && Boolean(user.departmentCode) && item.targetDepartment === user.departmentCode;
-}
-
-function canCommentRequest(user: SessionUser, item: RequestRow) {
-  const customerParticipant = item.organization === user.organization && (item.ownerId === user.id || ["customer_member", "customer_admin", "tenant_member", "tenant_admin"].includes(user.role));
-  const assignedTeam = can(user.role, "request:read:assigned_team") && Boolean(user.departmentCode) && item.targetDepartment === user.departmentCode;
-  return item.status !== "cancelled" && (customerParticipant || assignedTeam);
-}
 
 async function findScopedRequest(user: SessionUser, id: string) {
   const db = await database();
@@ -46,16 +34,19 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   const item = await findScopedRequest(user, id);
   if (!item) return Response.json({ error: "REQUEST_NOT_FOUND" }, { status: 404 });
   const db = await database();
-  const [comments, timeline] = await Promise.all([
+  const [comments, timeline, attachments] = await Promise.all([
     db.prepare("SELECT c.id,c.author_id AS authorId,u.full_name AS authorName,u.role AS authorRole,c.body,c.created_at AS createdAt FROM request_comments c JOIN users u ON u.id=c.author_id WHERE c.request_id=? ORDER BY c.created_at ASC").bind(id).all(),
     db.prepare("SELECT a.id,a.action,a.metadata,a.created_at AS createdAt,u.full_name AS actorName FROM audit_logs a JOIN users u ON u.id=a.actor_id WHERE a.entity_type='service_request' AND a.entity_id=? ORDER BY a.created_at ASC").bind(id).all<{ id: string; action: string; metadata: string; createdAt: number; actorName: string }>(),
+    db.prepare("SELECT a.id,a.original_name AS originalName,a.content_type AS contentType,a.size_bytes AS sizeBytes,a.sha256,a.uploaded_by AS uploadedBy,u.full_name AS uploaderName,a.created_at AS createdAt FROM request_attachments a JOIN users u ON u.id=a.uploaded_by WHERE a.request_id=? AND a.validation_status='validated' ORDER BY a.created_at ASC").bind(id).all(),
   ]);
   return Response.json({
     request: item,
     comments: comments.results,
+    attachments: attachments.results,
     timeline: timeline.results.map((entry) => ({ ...entry, metadata: parseMetadata(entry.metadata) })),
     permissions: {
       canComment: canCommentRequest(user, item),
+      canUploadAttachment: canCommentRequest(user, item),
       canCancel: item.ownerId === user.id && item.organization === user.organization && canCustomerCancelRequest(item.status),
     },
   });

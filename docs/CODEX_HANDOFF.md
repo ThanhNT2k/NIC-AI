@@ -68,6 +68,14 @@ Máy mới cần tạo `.env.local` từ `.env.example`; không sao chép secret
 
 ## Nhật ký bàn giao
 
+### 2026-07-21 - Attachment riêng tư cho trao đổi request
+
+- Thêm migration D1 `0012_request_attachments.sql` và Supabase `202607210013_request_attachments.sql`; metadata liên kết request/uploader, giới hạn 8 MB, lưu SHA-256 và chỉ lộ bản ghi `validated` theo scope RLS của request cha.
+- Bật R2 binding riêng `ATTACHMENTS`; object không public. Upload/download đi qua API session, CSRF, rate limit, request scope và audit; download dùng `private, no-store`, `nosniff` và CSP sandbox.
+- UI “Yêu cầu của tôi” hiển thị, tải lên và tải xuống attachment trong chi tiết request. Chỉ nhận PDF/PNG/JPEG/TXT; backend đối chiếu MIME/magic bytes, chặn executable, active PDF và mẫu EICAR; nếu ghi metadata/audit lỗi thì xóa bù object R2.
+- Migration D1 local áp dụng thành công; `npm.cmd run lint` và `npm.cmd test` đạt 61 unit/integration test, production build và rendered HTML test. Production vẫn cần malware scanner chuyên dụng/quarantine trước khi mở rộng loại tệp hoặc coi kiểm tra chữ ký là antivirus đầy đủ.
+- Bước tiếp theo: browser E2E customer ↔ operator ↔ notification ↔ attachment; áp các migration Supabase trên staging và chạy isolation test với hai JWT khác tenant.
+
 ### 2026-07-21 - Hội tụ Supabase RLS cho request và trao đổi
 
 - Thêm migration PostgreSQL `202607210012_request_collaboration.sql` cho `service_requests` và `request_comments`, liên kết với `request_drafts`, `auth.users` và `organizations`; bổ sung unique idempotency theo owner cùng index owner/team/comment timeline.

@@ -339,7 +339,7 @@ Operational accounts use the same test password:
 
 ## 7. Testing & Evaluation
 
-Current verified baseline: **55 automated checks passing** (54 unit/integration and 1 rendered-page test).
+Current verified baseline: **62 automated checks passing** (61 unit/integration and 1 rendered-page test).
 
 | Test area | Evidence |
 |---|---|
@@ -381,7 +381,7 @@ The app is packaged as a Cloudflare Worker-compatible Vinext build. Logical stor
 ```json
 {
   "d1": "DB",
-  "r2": null
+  "r2": "ATTACHMENTS"
 }
 ```
 

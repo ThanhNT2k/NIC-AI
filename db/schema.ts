@@ -93,6 +93,19 @@ export const requestComments = sqliteTable("request_comments", {
   createdAt: integer("created_at").notNull(),
 });
 
+export const requestAttachments = sqliteTable("request_attachments", {
+  id: text("id").primaryKey(),
+  requestId: text("request_id").notNull().references(() => serviceRequests.id, { onDelete: "cascade" }),
+  uploadedBy: text("uploaded_by").notNull().references(() => users.id),
+  objectKey: text("object_key").notNull().unique(),
+  originalName: text("original_name").notNull(),
+  contentType: text("content_type").notNull(),
+  sizeBytes: integer("size_bytes").notNull(),
+  sha256: text("sha256").notNull(),
+  validationStatus: text("validation_status").notNull().default("validated"),
+  createdAt: integer("created_at").notNull(),
+});
+
 export const spaces = sqliteTable("spaces", {
   id: text("id").primaryKey(),
   code: text("code").notNull().unique(),
