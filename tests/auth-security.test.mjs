@@ -42,11 +42,18 @@ test("submit requires current confirmation, ownership and idempotency", async ()
 
 test("official request reads remain tenant and owner scoped", async () => {
   const requests = await readFile(new URL("../app/api/requests/route.ts", import.meta.url), "utf8");
+  const page = await readFile(new URL("../app/portal/requests/page.tsx", import.meta.url), "utf8");
+  const portal = await readFile(new URL("../app/components/RequestsPortal.tsx", import.meta.url), "utf8");
   assert.match(requests, /owner_id = \?/);
   assert.match(requests, /organization = \?/);
   assert.match(requests, /user\.organization/);
   assert.match(requests, /target_department = \?/);
   assert.match(requests, /request:read:assigned_team/);
+  assert.match(requests, /details/);
+  assert.match(page, /RequestsPortal/);
+  assert.match(portal, /fetch\("\/api\/requests"/);
+  assert.match(portal, /Xem chi tiết/);
+  assert.doesNotMatch(portal, /PATCH|request:update_status/);
 });
 
 test("ERP roles grant capabilities instead of trusting UI role labels", async () => {

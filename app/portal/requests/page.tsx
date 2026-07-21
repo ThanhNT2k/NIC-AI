@@ -1,3 +1,3 @@
-import { ConciergeWorkspace } from "../../components/ConciergeWorkspace";
+import { RequestsPortal } from "../../components/RequestsPortal";
 
-export default function RequestsPage() { return <ConciergeWorkspace view="requests" />; }
+export default function RequestsPage() { return <RequestsPortal />; }

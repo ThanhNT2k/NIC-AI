@@ -4,6 +4,7 @@ import "./p2.css";
 import "./p3.css";
 import "./enterprise.css";
 import "./diagnostics.css";
+import "./requests.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://nic-service-hub.ntt-121020.chatgpt.site"),

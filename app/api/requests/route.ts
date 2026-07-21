@@ -4,7 +4,7 @@ import { can } from "@/lib/access-control";
 export async function GET(request: Request) {
   const user = await currentUser(request); if (!user) return Response.json({ error: "AUTH_REQUIRED" }, { status: 401 });
   const db = await database();
-  const columns = "id, service_type AS serviceType, title, status, target_department AS targetDepartment, assigned_to AS assignedTo, created_at AS createdAt";
+  const columns = "id, service_type AS serviceType, title, details, status, target_department AS targetDepartment, assigned_to AS assignedTo, organization, created_at AS createdAt, updated_at AS updatedAt";
   if (can(user.role, "request:read:assigned_team") && user.departmentCode) {
     const rows = await db.prepare(`SELECT ${columns} FROM service_requests WHERE target_department = ? ORDER BY created_at DESC LIMIT 50`).bind(user.departmentCode).all();
     return Response.json({ scope: "assigned_team", requests: rows.results });

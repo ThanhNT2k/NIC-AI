@@ -68,6 +68,14 @@ Máy mới cần tạo `.env.local` từ `.env.example`; không sao chép secret
 
 ## Nhật ký bàn giao
 
+### 2026-07-21 - Nối trang yêu cầu vào dữ liệu và chức năng thật
+
+- Thay danh sách minh họa trong `/portal/requests` bằng `RequestsPortal`, tải dữ liệu từ `/api/requests` theo scope `own`, `organization` hoặc `assigned_team` do backend quyết định.
+- Bổ sung bộ lọc tất cả/đang xử lý/cần bổ sung/đã hoàn tất, làm mới, loading/error/empty state và modal chi tiết có nội dung đã gửi, dịch vụ, đội xử lý, thời gian, doanh nghiệp và người phụ trách.
+- Mở rộng response đọc request với `details`, `organization`, `updatedAt`; các câu SQL tenant/owner scope giữ nguyên. Customer portal không có PATCH hoặc capability cập nhật trạng thái; nghiệp vụ vận hành tiếp tục ở `/portal/operations`.
+- Thêm responsive stylesheet riêng `app/requests.css` và regression test chứng minh trang dùng API thật, có chi tiết và không mở quyền cập nhật.
+- Kiểm tra: `npm run lint` đạt; `npm test` đạt 52 unit/integration test, production build và rendered HTML test. Chưa tái kiểm thử trực quan sau thay đổi do browser plugin runtime bị thiếu khỏi cache trong lượt này.
+
 ### 2026-07-21 - Sửa layout và submit form dịch vụ
 
 - Sửa xung đột specificity khiến `.service-form-grid` bị `display:flex` và ép bốn trường trên cùng một hàng; form dùng grid 2 cột desktop, 1 cột dưới 620px, control có `min-width:0` và chiều cao nhất quán.
