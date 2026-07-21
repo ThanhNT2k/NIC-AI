@@ -8,7 +8,7 @@ ALTER TABLE `users` ADD COLUMN `mfa_required` integer DEFAULT 0 NOT NULL;
 --> statement-breakpoint
 CREATE UNIQUE INDEX `users_external_identity_unique` ON `users` (`identity_provider`,`identity_subject`) WHERE `identity_subject` IS NOT NULL;
 --> statement-breakpoint
-ALTER TABLE `sessions` ADD COLUMN `auth_method` text DEFAULT 'password' NOT NULL CHECK (`auth_method` IN ('password','oidc'));
+ALTER TABLE `sessions` ADD COLUMN `auth_method` text DEFAULT 'local' NOT NULL CHECK (`auth_method` IN ('local','federated'));
 --> statement-breakpoint
 ALTER TABLE `sessions` ADD COLUMN `mfa_verified` integer DEFAULT 0 NOT NULL;
 --> statement-breakpoint

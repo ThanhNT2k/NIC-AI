@@ -11,18 +11,21 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   const { id: draftId } = await context.params; const db = await database();
   const existing = await db.prepare("SELECT id, status FROM service_requests WHERE owner_id = ? AND idempotency_key = ?").bind(user.id, idempotencyKey).first<ExistingRequest>();
   if (existing) return Response.json({ request: existing, replayed: true });
-  const requestId = crypto.randomUUID(); const auditId = crypto.randomUUID(); const now = Math.floor(Date.now() / 1000);
+  const draft = await db.prepare("SELECT service_type AS serviceType FROM service_drafts WHERE id=? AND owner_id=?").bind(draftId,user.id).first<{serviceType:string}>();
+  const requestId = crypto.randomUUID(); const auditId = crypto.randomUUID(); const workOrderId = draft?.serviceType === "support" ? crypto.randomUUID() : null; const now = Math.floor(Date.now() / 1000);
   try {
-    const results = await db.batch([
-      db.prepare("INSERT INTO service_requests (id, draft_id, owner_id, organization, service_type, title, details, status, target_department, requester_role, visibility, idempotency_key, created_at) SELECT ?, d.id, d.owner_id, ?, d.service_type, d.title, d.details, 'submitted', ?, ?, 'organization', ?, ? FROM service_drafts d WHERE d.id = ? AND d.owner_id = ? AND d.status = 'draft' AND d.confirmed_version = d.version").bind(requestId, user.organization, targetTeamFor((await db.prepare("SELECT service_type AS serviceType FROM service_drafts WHERE id = ? AND owner_id = ?").bind(draftId, user.id).first<{ serviceType: string }>())?.serviceType ?? ""), user.role, idempotencyKey, now, draftId, user.id),
+    const statements = [
+      db.prepare("INSERT INTO service_requests (id, draft_id, owner_id, organization, service_type, title, details, status, target_department, requester_role, visibility, idempotency_key, created_at) SELECT ?, d.id, d.owner_id, ?, d.service_type, d.title, d.details, 'submitted', ?, ?, 'organization', ?, ? FROM service_drafts d WHERE d.id = ? AND d.owner_id = ? AND d.status = 'draft' AND d.confirmed_version = d.version").bind(requestId, user.organization, targetTeamFor(draft?.serviceType ?? ""), user.role, idempotencyKey, now, draftId, user.id),
       db.prepare("UPDATE service_drafts SET status = 'submitted', updated_at = ? WHERE id = ? AND owner_id = ? AND status = 'draft' AND confirmed_version = version AND EXISTS (SELECT 1 FROM service_requests WHERE id = ? AND draft_id = service_drafts.id)").bind(now, draftId, user.id, requestId),
       db.prepare("INSERT INTO audit_logs (id, actor_id, action, entity_type, entity_id, metadata, created_at) SELECT ?, ?, 'request.submitted', 'service_request', id, json_object('draftId', draft_id), ? FROM service_requests WHERE id = ? AND owner_id = ?").bind(auditId, user.id, now, requestId, user.id),
-    ]);
+    ];
+    if(workOrderId){statements.push(db.prepare("INSERT INTO maintenance_work_orders (id,request_id,title,location,priority,status,resolution,created_by,created_at,updated_at) SELECT ?,id,title,'Chờ Facility xác nhận','normal','open','',?,?,? FROM service_requests WHERE id=? AND service_type='support'").bind(workOrderId,user.id,now,now,requestId),db.prepare("INSERT INTO audit_logs (id,actor_id,action,entity_type,entity_id,metadata,created_at) SELECT ?,?,'work_order.auto_created','maintenance_work_order',?,json_object('requestId',id,'triageRequired',1),? FROM service_requests WHERE id=? AND service_type='support'").bind(crypto.randomUUID(),user.id,workOrderId,now,requestId));}
+    const results = await db.batch(statements);
     if ((results[0].meta.changes ?? 0) !== 1 || (results[1].meta.changes ?? 0) !== 1) return Response.json({ error: "CONFIRMATION_REQUIRED" }, { status: 409 });
   } catch {
     const replay = await db.prepare("SELECT id, status FROM service_requests WHERE owner_id = ? AND idempotency_key = ?").bind(user.id, idempotencyKey).first<ExistingRequest>();
     if (replay) return Response.json({ request: replay, replayed: true });
     return Response.json({ error: "SUBMIT_FAILED" }, { status: 500 });
   }
-  return Response.json({ request: { id: requestId, status: "submitted" }, replayed: false }, { status: 201 });
+  return Response.json({ request: { id: requestId, status: "submitted" }, workOrderId, replayed: false }, { status: 201 });
 }

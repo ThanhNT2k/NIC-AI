@@ -17,11 +17,12 @@ Thư mục này mô tả phương án giải quyết bài toán, kiến trúc m�
 11. [P1 — Độ tin cậy vận hành](./P1_OPERATIONAL_RELIABILITY.md)
 12. [P2 — Danh mục vận hành](./P2_OPERATIONAL_PORTFOLIO.md)
 13. [P3 — Procurement và nền tảng enterprise](./P3_ENTERPRISE_PROCUREMENT.md)
+14. [Chẩn đoán runtime và tự động hóa nghiệp vụ](./diagnostics-automation.md)
 
 ## Trạng thái tài liệu
 
 - **Đã có trong MVP:** ERP shell theo role, session và capability backend, request/booking/work order, visitor/event/provider, độ tin cậy P1, danh mục vận hành P2, audit, migration D1, unit/integration test và CI.
-- **Chưa hoàn thiện:** cấu hình IdP/secret/lịch cron production, connector thiết bị/controller thật, supplier self-service, Hybrid RAG có citation, backup/restore và kiểm định production.
+- **Chưa hoàn thiện:** cấu hình IdP/secret/lịch cron production, connector thiết bị/controller thật, supplier self-service, Hybrid RAG/vector và bộ đánh giá, backup/restore và kiểm định production.
 - Nội dung ghi **MUST** là yêu cầu bắt buộc trước production; **SHOULD** là khuyến nghị.
 
 ## Quyết định nền tảng

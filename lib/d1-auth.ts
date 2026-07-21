@@ -51,12 +51,12 @@ export async function verifyPassword(password: string, expectedHash: string, sal
   return constantTimeEqual(actual, base64ToBytes(expectedHash));
 }
 
-export async function createSession(userId: string, options: { authMethod?: "password" | "oidc"; mfaVerified?: boolean } = {}) {
+export async function createSession(userId: string, options: { authMethod?: "local" | "federated"; mfaVerified?: boolean } = {}) {
   const token = bytesToBase64(crypto.getRandomValues(new Uint8Array(32)));
   const csrfToken = bytesToBase64(crypto.getRandomValues(new Uint8Array(24)));
   const now = Math.floor(Date.now() / 1000);
   const db = await database();
-  await db.prepare("INSERT INTO sessions (id,user_id,token_hash,csrf_hash,auth_method,mfa_verified,expires_at,created_at) VALUES (?,?,?,?,?,?,?,?)").bind(crypto.randomUUID(),userId,await sha256(token),await sha256(csrfToken),options.authMethod??"password",options.mfaVerified?1:0,now+SESSION_TTL_SECONDS,now).run();
+  await db.prepare("INSERT INTO sessions (id,user_id,token_hash,csrf_hash,auth_method,mfa_verified,expires_at,created_at) VALUES (?,?,?,?,?,?,?,?)").bind(crypto.randomUUID(),userId,await sha256(token),await sha256(csrfToken),options.authMethod??"local",options.mfaVerified?1:0,now+SESSION_TTL_SECONDS,now).run();
   return { token, csrfToken, maxAge: SESSION_TTL_SECONDS };
 }
 

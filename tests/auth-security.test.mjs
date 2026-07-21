@@ -115,7 +115,29 @@ test("Copilot remains authenticated and has no submit capability", async () => {
   assert.match(route, /history\.slice\(-8\)/);
   assert.match(route, /responseJsonSchema/);
   assert.match(route, /localUnderstanding/);
+  assert.match(route, /knowledge_documents WHERE status='active'/);
+  assert.match(route, /SELECT name,location,capacity FROM spaces/);
+  assert.match(route, /allowedSources/);
   assert.doesNotMatch(route, /submit_request|service_requests|INSERT INTO/);
+});
+
+test("diagnostics are privileged and support exact source frames", async () => {
+  const route = await readFile(new URL("../app/api/diagnostics/route.ts", import.meta.url), "utf8");
+  const worker = await readFile(new URL("../worker/index.ts", import.meta.url), "utf8");
+  assert.match(route, /platform:manage/);
+  assert.match(route, /user\.role !== "auditor"/);
+  assert.match(route, /WHERE correlation_id=\?/);
+  assert.match(worker, /recordDiagnostic/);
+  assert.match(worker, /diagnosticId/);
+});
+
+test("confirmed support submission creates an audited triage work order", async () => {
+  const route = await readFile(new URL("../app/api/service-drafts/[id]/submit/route.ts", import.meta.url), "utf8");
+  assert.match(route, /confirmed_version = d\.version/);
+  assert.match(route, /serviceType === "support"/);
+  assert.match(route, /INSERT INTO maintenance_work_orders/);
+  assert.match(route, /work_order\.auto_created/);
+  assert.match(route, /db\.batch\(statements\)/);
 });
 
 test("enterprise login uses OIDC code flow, PKCE, nonce, signature validation and MFA",async()=>{

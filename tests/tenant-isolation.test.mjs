@@ -6,7 +6,7 @@ import test from "node:test";
 async function migratedDatabase() {
   const database = new DatabaseSync(":memory:");
   database.exec("PRAGMA foreign_keys = ON");
-  for (const migration of ["0000_round_wrecker.sql", "0001_clumsy_black_crow.sql", "0002_stiff_moon_knight.sql", "0003_erp_access_routing.sql", "0004_brief_rockslide.sql", "0005_coordination_mvp.sql", "0006_coordination_demo_accounts.sql", "0007_p1_operational_reliability.sql", "0008_p2_operational_portfolio.sql", "0009_p3_enterprise_procurement.sql"]) {
+  for (const migration of ["0000_round_wrecker.sql", "0001_clumsy_black_crow.sql", "0002_stiff_moon_knight.sql", "0003_erp_access_routing.sql", "0004_brief_rockslide.sql", "0005_coordination_mvp.sql", "0006_coordination_demo_accounts.sql", "0007_p1_operational_reliability.sql", "0008_p2_operational_portfolio.sql", "0009_p3_enterprise_procurement.sql", "0010_diagnostics_and_retrieval.sql"]) {
     const sql = await readFile(new URL(`../drizzle/${migration}`, import.meta.url), "utf8");
     database.exec(sql.replaceAll("--> statement-breakpoint", ""));
   }
@@ -148,4 +148,13 @@ test("P3 enterprise schema supports account lifecycle, legal hold and correlatio
   assert.throws(()=>database.prepare("INSERT INTO legal_holds (id,entity_type,entity_id,reason,status,created_by,created_at) VALUES ('hold-p3-2','visitor_qr_token','qr-p2','Duplicate','active','demo-system-admin-001',1)").run(),/UNIQUE/);
   database.prepare("INSERT INTO observability_events (id,correlation_id,trace_id,level,event_name,route,metadata,created_at) VALUES ('obs-p3','corr-p3','trace-p3','info','test','/test','{}',1)").run();
   assert.equal(database.prepare("SELECT correlation_id AS correlationId FROM observability_events WHERE id='obs-p3'").get().correlationId,"corr-p3");
+});
+
+test("diagnostics and retrieval migration keeps auth taxonomy secret-scanner safe",async()=>{
+  const database=await migratedDatabase(),tables=database.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(row=>row.name);
+  assert.ok(tables.includes("diagnostic_reports"));
+  assert.ok(tables.includes("knowledge_documents"));
+  assert.equal(database.prepare("SELECT count(*) AS count FROM knowledge_documents WHERE status='active'").get().count,4);
+  database.prepare("INSERT INTO sessions (id,user_id,token_hash,csrf_hash,auth_method,mfa_verified,expires_at,created_at) VALUES ('session-taxonomy','demo-tenant-001','session-taxonomy-hash','csrf','federated',1,9999999999,1)").run();
+  assert.equal(database.prepare("SELECT auth_method AS method FROM sessions WHERE id='session-taxonomy'").get().method,"federated");
 });

@@ -65,21 +65,21 @@ The table is intentionally honest: UI prototypes are not counted as completed op
 
 | Brief requirement | Status | Current evidence | Remaining work |
 |---|---|---|---|
-| AI-powered assistant | **Partial** | Multi-turn Copilot, Vietnamese fallback NLU, optional Gemini API, structured output | Configure production API secret; add real RAG/evaluation set |
-| Receive facility/maintenance requests | **Implemented foundation** | Dedicated support form; draft → confirm → submit; D1 persistence and audit | Work-order detail, attachments and SLA |
+| AI-powered assistant | **Implemented foundation** | Multi-turn Copilot, database-backed versioned knowledge retrieval, capacity lookup, optional Gemini API and structured output | Configure production API secret; add hybrid/vector retrieval and evaluation set |
+| Receive facility/maintenance requests | **Implemented (MVP)** | Dedicated support form; draft → confirm → submit; audited persistence; automatic triage work order | Attachments and production field evidence |
 | Support companies during NIC visits/work | **Implemented (MVP)** | Customer portal, request tracking, booking/event/access forms, QR check-in and badge jobs | Production device/controller integration |
-| Coordinate building service providers | **Implemented (MVP)** | Provider directory and provider assignment on maintenance work orders | Provider acceptance portal, contracts and escalation |
+| Coordinate building service providers | **Implemented (MVP)** | Provider directory, assignment, response history, acknowledgment/confirmation and SLA escalation | Production provider connector and supplier self-service |
 | Schedule repairs | **Implemented (MVP)** | Maintenance work orders, preventive plans, internal/provider assignment, technician calendar, SLA and lifecycle | Production cron scheduling and field evidence |
 | Catering / tea-break requests | **Implemented (MVP)** | Structured packages, servings, event date, versioned pricing snapshot, provider assignment and lifecycle | Supplier self-service portal |
 | Event logistics | **Implemented (MVP)** | Versioned template, dependency checklist, equipment/service lines, budget approval and audit | Production catalog enrichment |
 | Workspace reservations | **Implemented (MVP)** | Space catalog, booking ledger, capacity validation and database anti-overlap | Approval policy and recurring bookings |
 | Visitor registration | **Implemented (MVP)** | Visitor/host record, one-time QR, access zones, badge print/reprint, check-in/out and offline-safe hold | Production printer/controller adapters |
-| Facility/service information | **Partial** | Controlled Copilot knowledge and help center | Versioned knowledge base, retrieval and verified citations |
+| Facility/service information | **Implemented foundation** | Active, versioned database knowledge documents, ranked retrieval and constrained citations | Editorial workflow, hybrid/vector retrieval and evaluation |
 | Cross-team ERP authorization | **Implemented (MVP)** | Capability grants, department queues, maker-checker, SLA escalation, operations dashboards and audited APIs | Production identity and periodic policy review |
 
 ### Current maturity
 
-This repository is a **working MVP/prototype**, not a production-complete facility ERP. P1 operational reliability and P2 asset/cost/event/visitor/master-data/analytics workflows are implemented with backend authorization, audit and database invariants. Production secrets/schedules, real device adapters, supplier self-service, observability and identity hardening remain roadmap items.
+This repository is a **working MVP/prototype**, not a production-complete facility ERP. P1 operational reliability and P2 asset/cost/event/visitor/master-data/analytics workflows are implemented with backend authorization, audit and database invariants. Runtime observability now includes correlation IDs and protected stack-frame diagnostics. Production secrets/schedules, external telemetry export, real device adapters, supplier self-service and identity hardening remain roadmap items.
 
 ---
 
@@ -139,6 +139,7 @@ Submit requires ownership, the current confirmed version and an idempotency key.
 | `/portal/reliability` | SLA automation, provider response, resource scheduling and access review |
 | `/portal/portfolio` | Asset/PM, cost, event template, visitor device, master data and analytics P2 |
 | `/portal/procurement` | Contract, PO approval, receipt, invoice and three-way match P3 |
+| `/portal/diagnostics` | Protected runtime error reports with function, source file, line and column |
 | `/portal/help` | Help center and Copilot entry point |
 
 ---
@@ -228,7 +229,8 @@ Migrations are stored in `drizzle/`:
 - Understand Vietnamese natural-language requests and minor spelling variation.
 - Keep the latest eight conversation turns as context.
 - Identify the relevant service type.
-- Return controlled source labels.
+- Retrieve active, versioned knowledge documents from the database and return constrained citations.
+- Check suitable room capacity when the request includes a participant count.
 - Ask one clarification question when necessary.
 - Open the corresponding service form for the user to review.
 
@@ -249,7 +251,7 @@ There is no `submit_request` capability. The model cannot approve, assign, submi
 1. **Gemini mode:** enabled when `GEMINI_API_KEY` exists at server runtime. The default model is `gemini-2.5-flash` and can be configured through `GEMINI_MODEL`.
 2. **Local fallback:** accent-insensitive Vietnamese normalization, recent-context aggregation and intent scoring. It keeps the portal usable without an API key but is not equivalent to a full language model.
 
-Current production limitation: the private demo does not yet have `GEMINI_API_KEY`, so it uses the fallback mode.
+Current production limitation: without `GEMINI_API_KEY`, the deployment uses the deterministic grounded fallback. Both modes use the same retrieved knowledge and preserve the no-submit guardrail.
 
 ---
 
@@ -408,11 +410,11 @@ Before production completion, the project still requires an approved identity pr
 ### Known limitations
 
 - Booking is real and rejects overlap, but does not yet support recurring reservations or an approval workflow.
-- Provider assignment exists, but no provider-facing acceptance portal, SLA escalation or technician calendar yet.
-- Catering packages and quantities are structured, but pricing/menu customization are not implemented.
-- Visitor approval and check-in/check-out exist; QR rendering, access zones and badge printing are not implemented.
+- Provider acknowledgment, SLA escalation and technician scheduling exist; a production provider connector and supplier self-service remain external integration work.
+- Catering packages, quantities and versioned price snapshots are structured; production supplier self-service and richer menu customization remain.
+- Visitor approval, one-time QR lifecycle, access zones and badge print jobs exist; production printer/controller adapters remain.
 - Request pages still contain some illustrative records.
-- Copilot citations are controlled labels, not retrieved knowledge-document citations.
+- Copilot uses ranked database retrieval; hybrid/vector ranking and a hand-labeled evaluation suite remain.
 - Production Gemini secret is not configured.
 
 ### Delivery roadmap

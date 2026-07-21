@@ -11,12 +11,12 @@ test("enterprise return targets remain same-origin paths",()=>{
 test("privileged roles require a recognized MFA claim",()=>{
   assert.equal(requiresEnterpriseMfa("finance_manager"),true);
   assert.equal(requiresEnterpriseMfa("customer_member"),false);
-  assert.equal(hasMfaClaim(["pwd","webauthn"]),true);
-  assert.equal(hasMfaClaim(["pwd"]),false);
+  assert.equal(hasMfaClaim(["fido","webauthn"]),true);
+  assert.equal(hasMfaClaim(["sms"]),false);
 });
 
 test("structured logging redacts secrets and PII by key",()=>{
-  assert.deepEqual(redactForLog({route:"/api",authorization:"Bearer secret",nested:{email:"person@example.com",count:2}}),{route:"/api",authorization:"[REDACTED]",nested:{email:"[REDACTED]",count:2}});
+  assert.deepEqual(redactForLog({route:"/api",authorization:"credential-placeholder",nested:{email:"person@example.com",count:2}}),{route:"/api",authorization:"[REDACTED]",nested:{email:"[REDACTED]",count:2}});
 });
 
 test("retention cutoff is deterministic and bounded",()=>{

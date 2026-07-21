@@ -6,7 +6,7 @@ File này giúp Codex tiếp tục công việc trên máy hoặc task mới mà
 
 ## Tóm tắt hiện tại
 
-Repository đang ở giai đoạn scaffold/prototype, chưa phải ERP production hoàn chỉnh. Phần chạy được hiện nay tập trung vào giao diện AI Copilot tiếng Việt, request draft có thể chỉnh sửa và policy chứng minh AI không thể submit thay người dùng.
+Repository là working MVP/prototype, chưa phải ERP production hoàn chỉnh. Các luồng P0–P3 đã có backend authorization, audit và database invariant; Copilot tiếng Việt truy xuất kho tri thức có version/citation nhưng vẫn chỉ chuẩn bị và không thể submit thay người dùng.
 
 Kiến trúc mục tiêu là web ERP dạng modular monolith dùng Supabase PostgreSQL làm nguồn dữ liệu chính. AI Copilot hỗ trợ hiểu ngôn ngữ, Hybrid RAG và tạo draft; authentication, authorization và submit chính thức thuộc backend/database.
 
@@ -25,13 +25,11 @@ Kiến trúc mục tiêu là web ERP dạng modular monolith dùng Supabase Post
 
 ## Chưa hoàn thiện
 
-- ERP shell, navigation và dashboard theo role.
-- Supabase Auth và protected routes.
-- RBAC/ABAC, organization scope và RLS được kiểm thử end-to-end.
-- Các domain Facility, Asset, Event, Booking, Service Request và Workflow.
-- API/service layer cho draft, confirm và submit transaction.
-- Tích hợp OpenAI runtime, ingestion/retrieval Hybrid RAG và citation thật.
-- Audit runtime, observability, rate limiting và deployment production.
+- Cấu hình IdP/MFA, secret, lịch cron, backup/restore và kiểm định production.
+- Adapter production cho badge printer, access controller, provider channel và telemetry exporter.
+- Supplier self-service và bằng chứng hiện trường/attachment đầy đủ.
+- Hybrid/vector retrieval, ingestion editorial workflow và evaluation set cho Copilot.
+- RLS/Supabase production được kiểm thử end-to-end trong môi trường triển khai thật.
 
 ## Quyết định đã chốt
 
@@ -69,6 +67,16 @@ npm audit --omit=dev
 Máy mới cần tạo `.env.local` từ `.env.example`; không sao chép secret vào Git hoặc file handoff.
 
 ## Nhật ký bàn giao
+
+### 2026-07-21 - Chẩn đoán stack trace, retrieval và tự động triage
+
+- Loại bỏ taxonomy `pwd/password` gây GitGuardian false positive; session auth method dùng `local/federated`, migration `0010` chuyển tương thích dữ liệu `oidc` cũ.
+- Thêm `diagnostic_reports`, parser stack trace có redaction, protected API/UI `/portal/diagnostics`; báo cáo hiển thị hàm, source file tương đối, dòng và cột cùng correlation/trace ID.
+- Copilot truy xuất `knowledge_documents` active có version, citation bị giới hạn theo tập đã retrieve và kiểm tra sức chứa không gian từ database.
+- Submit draft `support` tự tạo maintenance work order triage và audit trong cùng database batch, chỉ sau mọi guardrail xác nhận/ownership/idempotency.
+- Cập nhật `README.md`, `docs/diagnostics-automation.md`; các connector thiết bị/provider thật vẫn cần credential và hạ tầng production.
+- Kiểm tra: migration D1 local áp dụng thành công; `npm run lint` đạt; `npm test` đạt 52 unit/integration test, production build và rendered HTML test.
+- Bước tiếp theo: nối adapter production/telemetry exporter, bổ sung hybrid vector retrieval và bộ đánh giá citation; không đưa secret vào repository.
 
 ### 2026-07-21 - Hoàn thành P3 procurement và nền tảng enterprise từ Kanban #12–#13
 

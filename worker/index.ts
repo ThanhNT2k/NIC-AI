@@ -1,6 +1,7 @@
 /** Cloudflare Worker entry point for the vinext-starter template. */
 import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
+import { recordDiagnostic } from "../lib/diagnostics";
 
 interface Env {
   ASSETS: Fetcher;
@@ -40,7 +41,16 @@ const worker = {
       }, allowedWidths);
     }
 
-    return handler.fetch(request, env, ctx);
+    try {
+      return await handler.fetch(request, env, ctx);
+    } catch (error) {
+      const incoming = request.headers.get("x-correlation-id")?.trim();
+      const correlationId = incoming && /^[a-zA-Z0-9._:-]{8,120}$/.test(incoming) ? incoming : crypto.randomUUID();
+      const traceId = crypto.randomUUID().replaceAll("-", "");
+      let diagnosticId = crypto.randomUUID();
+      try { diagnosticId = (await recordDiagnostic(env.DB,{error,correlationId,traceId,route:new URL(request.url).pathname})).id; } catch { /* Database outage must not hide the original failure. */ }
+      return Response.json({error:"INTERNAL_ERROR",diagnosticId,correlationId},{status:500,headers:{"x-correlation-id":correlationId,"traceparent":`00-${traceId}-0000000000000001-01`,"cache-control":"no-store"}});
+    }
   },
 };
 
