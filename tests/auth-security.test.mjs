@@ -186,3 +186,13 @@ test("P3 routes enforce backend authorization, correlation, redaction and retent
   assert.match(rls,/is_active_provider_member/);
   assert.match(rls,/revoke all on public\.retention_job_runs/);
 });
+
+test("coordination portal guards initial data and async form lifetime",async()=>{
+  const portal=await readFile(new URL("../app/components/CoordinationPortal.tsx",import.meta.url),"utf8");
+  const createSource=portal.slice(portal.indexOf("async function create"),portal.indexOf("async function update"));
+  assert.match(portal,/if\(!data\)return <main/);
+  assert.match(createSource,/const formElement=event\.currentTarget/);
+  assert.match(createSource,/formElement\.reset\(\)/);
+  assert.doesNotMatch(createSource,/event\.currentTarget\.reset\(\)/);
+  assert.match(createSource,/finally\{setPending\(false\);\}/);
+});

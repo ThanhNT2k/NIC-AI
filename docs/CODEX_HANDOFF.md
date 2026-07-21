@@ -68,6 +68,14 @@ Máy mới cần tạo `.env.local` từ `.env.example`; không sao chép secret
 
 ## Nhật ký bàn giao
 
+### 2026-07-21 - Sửa lỗi tải và submit trang điều phối
+
+- Sửa `/portal/coordination` trả HTTP 500 khi render lần đầu: component trả loading shell trước khi truy cập danh sách trên dữ liệu API chưa tải.
+- Giữ tham chiếu form trước `await`, reset sau khi tạo thành công và xử lý an toàn lỗi HTTP/JSON/network cho cả thao tác tạo và cập nhật điều phối.
+- Thêm regression test bảo vệ null-guard và vòng đời form bất đồng bộ.
+- Kiểm thử trực tiếp trên browser local: trang tải đủ hai form và hai danh sách; tạo đăng ký khách thành công, form được reset, danh sách cập nhật và console không có error.
+- Kiểm tra: `/portal/coordination` trả HTTP 200; `npm run lint` đạt; `npm test` đạt 53 unit/integration test, production build và rendered HTML test.
+
 ### 2026-07-21 - Nối trang yêu cầu vào dữ liệu và chức năng thật
 
 - Thay danh sách minh họa trong `/portal/requests` bằng `RequestsPortal`, tải dữ liệu từ `/api/requests` theo scope `own`, `organization` hoặc `assigned_team` do backend quyết định.
