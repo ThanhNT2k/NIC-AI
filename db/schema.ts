@@ -85,6 +85,14 @@ export const serviceRequests = sqliteTable("service_requests", {
   updatedAt: integer("updated_at"),
 }, (table) => [uniqueIndex("service_requests_owner_idempotency_idx").on(table.ownerId, table.idempotencyKey)]);
 
+export const requestComments = sqliteTable("request_comments", {
+  id: text("id").primaryKey(),
+  requestId: text("request_id").notNull().references(() => serviceRequests.id),
+  authorId: text("author_id").notNull().references(() => users.id),
+  body: text("body").notNull(),
+  createdAt: integer("created_at").notNull(),
+});
+
 export const spaces = sqliteTable("spaces", {
   id: text("id").primaryKey(),
   code: text("code").notNull().unique(),

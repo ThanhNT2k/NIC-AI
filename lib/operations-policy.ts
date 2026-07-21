@@ -35,6 +35,10 @@ export function canTransitionRequest(from: string, to: string) {
   return from === to || requestTransitions[from]?.includes(to) === true;
 }
 
+export function canCustomerCancelRequest(status: string) {
+  return status === "submitted" || status === "triaged";
+}
+
 export function canTransitionWorkOrder(from: string, to: string) {
   return from === to || workOrderTransitions[from]?.includes(to) === true;
 }

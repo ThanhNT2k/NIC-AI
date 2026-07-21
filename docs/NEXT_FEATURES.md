@@ -11,14 +11,14 @@
 ## P1 - Hoàn thiện bốn dịch vụ end-user
 
 1. Đặt phòng: danh mục không gian, kiểm tra sức chứa, tiện ích, availability và chống booking trùng.
-2. Hỗ trợ: phân loại, mức ưu tiên, file bằng chứng, trao đổi, SLA và timeline trạng thái.
+2. Hỗ trợ: đã có trao đổi hai chiều, SLA và timeline trạng thái; còn file bằng chứng/attachment bền vững và ưu tiên có cấu trúc trên request.
 3. Sự kiện: thông tin chương trình, khách, dịch vụ, checklist, phê duyệt và liên kết booking.
 4. Thẻ ra vào: danh sách thành viên, thời hạn, khu vực truy cập, quy trình duyệt và thu hồi.
-5. Trang “Yêu cầu của tôi” lấy dữ liệu thật, có tìm kiếm, lọc, chi tiết và hủy theo policy.
+5. Trang “Yêu cầu của tôi” đã lấy dữ liệu thật, có tìm kiếm, lọc, chi tiết, trao đổi và hủy theo policy (hoàn thành 2026-07-21).
 
 ## P2 - Nâng trải nghiệm và vận hành
 
-1. Notification trong ứng dụng và email với preference, retry và audit.
+1. Notification trong ứng dụng đã có deep-link, đọc từng mục/đọc tất cả và audit; còn email, preference và retry delivery production.
 2. Knowledge base có version, effective date, access scope và citation.
 3. NIC Copilot dùng allowlist `search_knowledge`, `check_availability`, `create_request_draft`; không có submit tool.
 4. Dashboard xử lý dành riêng cho Service Desk, Facility và Event team, tách khỏi portal end-user theo capability.

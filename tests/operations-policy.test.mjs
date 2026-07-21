@@ -1,11 +1,19 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { canTransitionRequest, canTransitionWorkOrder, validBookingWindow } from "../dist-test/operations-policy.js";
+import { canCustomerCancelRequest, canTransitionRequest, canTransitionWorkOrder, validBookingWindow } from "../dist-test/operations-policy.js";
 
 test("request status transitions reject invalid jumps",()=>{
   assert.equal(canTransitionRequest("submitted","in_progress"),true);
   assert.equal(canTransitionRequest("submitted","resolved"),false);
   assert.equal(canTransitionRequest("cancelled","in_progress"),false);
+});
+
+test("customer cancellation stops once fulfillment starts",()=>{
+  assert.equal(canCustomerCancelRequest("submitted"),true);
+  assert.equal(canCustomerCancelRequest("triaged"),true);
+  assert.equal(canCustomerCancelRequest("in_progress"),false);
+  assert.equal(canCustomerCancelRequest("waiting_customer"),false);
+  assert.equal(canCustomerCancelRequest("resolved"),false);
 });
 
 test("work order requires an explicit operational lifecycle",()=>{

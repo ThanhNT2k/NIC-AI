@@ -56,6 +56,25 @@ test("official request reads remain tenant and owner scoped", async () => {
   assert.doesNotMatch(portal, /PATCH|request:update_status/);
 });
 
+test("request collaboration enforces scoped reads, CSRF, rate limit and audited cancellation", async () => {
+  const route = await readFile(new URL("../app/api/requests/[id]/route.ts", import.meta.url), "utf8");
+  const migration = await readFile(new URL("../drizzle/0011_request_collaboration.sql", import.meta.url), "utf8");
+  assert.match(route, /currentUser\(request\)/);
+  assert.match(route, /requireCsrf\(request\)/);
+  assert.match(route, /enforceRateLimit/);
+  assert.match(route, /item\.ownerId === user\.id/);
+  assert.match(route, /request:read:organization/);
+  assert.match(route, /request:read:assigned_team/);
+  assert.match(route, /canCommentRequest/);
+  assert.match(route, /COMMENT_FORBIDDEN/);
+  assert.match(route, /request\.comment_added/);
+  assert.match(route, /request\.cancelled_by_customer/);
+  assert.match(route, /canCustomerCancelRequest/);
+  assert.match(route, /recipient_id/);
+  assert.match(migration, /request_comments/);
+  assert.match(migration, /REFERENCES `service_requests`/);
+});
+
 test("ERP roles grant capabilities instead of trusting UI role labels", async () => {
   const access = await readFile(new URL("../lib/access-control.ts", import.meta.url), "utf8");
   const auth = await readFile(new URL("../lib/d1-auth.ts", import.meta.url), "utf8");
@@ -211,6 +230,9 @@ test("portal home uses live activity and every portal route shares the authentic
   assert.match(notifications,/WHERE recipient_id=\?/);
   assert.match(notifications,/requireCsrf\(request\)/);
   assert.match(notifications,/status='read'.*recipient_id=\?/);
+  assert.match(notifications,/mark_read/);
+  assert.match(header,/request=\$\{encodeURIComponent\(item\.entityId\)\}/);
+  assert.match(header,/openNotification/);
   for(const page of ["bookings","requests","coordination","operations","reliability","portfolio","procurement","diagnostics"]){
     const source=await readFile(new URL(`../app/portal/${page}/page.tsx`,import.meta.url),"utf8");
     assert.match(source,/PortalHeader/);

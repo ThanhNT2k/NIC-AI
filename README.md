@@ -66,7 +66,7 @@ The table is intentionally honest: UI prototypes are not counted as completed op
 | Brief requirement | Status | Current evidence | Remaining work |
 |---|---|---|---|
 | AI-powered assistant | **Implemented foundation** | Multi-turn Copilot, database-backed versioned knowledge retrieval, capacity lookup, optional Gemini API and structured output | Configure production API secret; add hybrid/vector retrieval and evaluation set |
-| Receive facility/maintenance requests | **Implemented (MVP)** | Dedicated support form; draft → confirm → submit; audited persistence; automatic triage work order | Attachments and production field evidence |
+| Receive facility/maintenance requests | **Implemented (MVP)** | Dedicated support form; draft → confirm → submit; audited persistence; automatic triage work order; scoped comments, timeline and cancellation | Attachments and production field evidence |
 | Support companies during NIC visits/work | **Implemented (MVP)** | Customer portal, request tracking, booking/event/access forms, QR check-in and badge jobs | Production device/controller integration |
 | Coordinate building service providers | **Implemented (MVP)** | Provider directory, assignment, response history, acknowledgment/confirmation and SLA escalation | Production provider connector and supplier self-service |
 | Schedule repairs | **Implemented (MVP)** | Maintenance work orders, preventive plans, internal/provider assignment, technician calendar, SLA and lifecycle | Production cron scheduling and field evidence |
@@ -132,7 +132,7 @@ Submit requires ownership, the current confirmed version and an idempotency key.
 | Route | Purpose |
 |---|---|
 | `/portal` | Customer workspace and common services |
-| `/portal/requests` | Requests visible within the user’s authorization scope |
+| `/portal/requests` | Scoped request search, detail, two-way comments, audit timeline and policy-based cancellation |
 | `/portal/bookings` | Real space catalog, booking form and personal booking ledger |
 | `/portal/operations` | Service Desk/Facility queue, assignment, status, booking agenda and work orders |
 | `/portal/coordination` | Visitor registration/check-in and event/catering coordination |
@@ -208,6 +208,7 @@ flowchart LR
 | `organization_memberships` | User role and department within an organization |
 | `service_drafts` | Editable, versioned requests before submission |
 | `service_requests` | Official submitted request, routing, assignment and visibility |
+| `request_comments` | Two-way request discussion linked to actor and official request |
 | `audit_logs` | Security and workflow audit events |
 | `rate_limits` | Distributed write/login rate-limit buckets |
 
@@ -219,6 +220,7 @@ Migrations are stored in `drizzle/`:
 - `0001` — service requests and audit logs;
 - `0002` — CSRF session data and distributed rate limits;
 - `0003` — departments, memberships and cross-team request routing.
+- `0011` — request comments and request-time index for customer/operator collaboration.
 
 ---
 

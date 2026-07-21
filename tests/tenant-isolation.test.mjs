@@ -6,7 +6,7 @@ import test from "node:test";
 async function migratedDatabase() {
   const database = new DatabaseSync(":memory:");
   database.exec("PRAGMA foreign_keys = ON");
-  for (const migration of ["0000_round_wrecker.sql", "0001_clumsy_black_crow.sql", "0002_stiff_moon_knight.sql", "0003_erp_access_routing.sql", "0004_brief_rockslide.sql", "0005_coordination_mvp.sql", "0006_coordination_demo_accounts.sql", "0007_p1_operational_reliability.sql", "0008_p2_operational_portfolio.sql", "0009_p3_enterprise_procurement.sql", "0010_diagnostics_and_retrieval.sql"]) {
+  for (const migration of ["0000_round_wrecker.sql", "0001_clumsy_black_crow.sql", "0002_stiff_moon_knight.sql", "0003_erp_access_routing.sql", "0004_brief_rockslide.sql", "0005_coordination_mvp.sql", "0006_coordination_demo_accounts.sql", "0007_p1_operational_reliability.sql", "0008_p2_operational_portfolio.sql", "0009_p3_enterprise_procurement.sql", "0010_diagnostics_and_retrieval.sql", "0011_request_collaboration.sql"]) {
     const sql = await readFile(new URL(`../drizzle/${migration}`, import.meta.url), "utf8");
     database.exec(sql.replaceAll("--> statement-breakpoint", ""));
   }
@@ -66,6 +66,18 @@ test("coordination migration supports visitors, providers and catering orders", 
   assert.ok(tables.includes("event_service_orders"));
   assert.ok(database.prepare("PRAGMA table_info('maintenance_work_orders')").all().some(column=>column.name==="provider_id"));
   assert.ok(database.prepare("SELECT id FROM service_providers WHERE service_types LIKE '%catering%'").get());
+});
+
+test("request comments remain attached to the scoped request", async () => {
+  const database = await migratedDatabase();
+  database.prepare("INSERT INTO service_drafts (id,owner_id,service_type,title,details,status,version,confirmed_version,created_at,updated_at) VALUES ('comment-draft','demo-tenant-001','support','Yêu cầu A','Chi tiết','submitted',1,1,1,1)").run();
+  database.prepare("INSERT INTO service_requests (id,draft_id,owner_id,organization,service_type,title,details,status,idempotency_key,created_at,updated_at) VALUES ('comment-request','comment-draft','demo-tenant-001','Innovate Vietnam','support','Yêu cầu A','Chi tiết','submitted','comment-key',1,1)").run();
+  database.prepare("INSERT INTO request_comments (id,request_id,author_id,body,created_at) VALUES ('comment-a','comment-request','demo-tenant-001','Thông tin bổ sung',2)").run();
+  const ownComments = database.prepare("SELECT c.id FROM request_comments c JOIN service_requests r ON r.id=c.request_id WHERE r.owner_id=? AND r.organization=?").all("demo-tenant-001", "Innovate Vietnam");
+  const otherTenantComments = database.prepare("SELECT c.id FROM request_comments c JOIN service_requests r ON r.id=c.request_id WHERE r.owner_id=? AND r.organization=?").all("demo-tenant-001", "Tenant B");
+  assert.deepEqual(ownComments.map(row => row.id), ["comment-a"]);
+  assert.deepEqual(otherTenantComments, []);
+  assert.throws(() => database.prepare("INSERT INTO request_comments (id,request_id,author_id,body,created_at) VALUES ('comment-invalid','missing-request','demo-tenant-001','Sai request',3)").run(), /FOREIGN KEY/);
 });
 
 test("P1 operational schema enforces anti-overlap and segregation of duties", async()=>{

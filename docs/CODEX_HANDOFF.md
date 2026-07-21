@@ -68,6 +68,17 @@ Máy mới cần tạo `.env.local` từ `.env.example`; không sao chép secret
 
 ## Nhật ký bàn giao
 
+### 2026-07-21 - Sprint cộng tác và vòng đời “Yêu cầu của tôi”
+
+- Thêm migration D1 `0011_request_collaboration.sql` và schema `request_comments`, liên kết comment với request/actor bằng foreign key và index theo request-thời gian.
+- Thêm `/api/requests/:id`: đọc chi tiết, comment và audit timeline theo owner/organization/assigned-team; write action yêu cầu session + CSRF + rate limit, ghi audit và phát notification theo từng người nhận.
+- Customer chỉ tự hủy request ở `submitted` hoặc `triaged`; backend kiểm tra owner, organization và current status. Request đã hủy không nhận comment mới.
+- `/portal/requests` có tìm kiếm, lọc, deep-link `?request=…`, chi tiết thật, trao đổi hai chiều, timeline và nút hủy theo permission backend trả về.
+- Notification request mở đúng bản ghi; hỗ trợ đánh dấu từng mục đã đọc và đánh dấu tất cả, luôn giới hạn bằng `recipient_id` và có audit.
+- Chưa thêm attachment vì repository chưa có storage adapter bền vững; không dùng dữ liệu giả. Chuỗi migration Supabase hiện chưa có `service_requests`, vì vậy chưa tạo migration comment phụ thuộc sai; cần hội tụ schema D1/Supabase trước production.
+- Kiểm tra: migration D1 local áp dụng thành công; `npm run lint` đạt; `npm test` đạt 57 unit/integration test, production build và rendered HTML test. Wrangler chỉ cảnh báo không ghi được debug log ngoài workspace, migration vẫn hoàn tất.
+- Bước tiếp theo: hội tụ schema và RLS Supabase cho request/comment, thêm storage attachment có malware/content validation, rồi bổ sung browser E2E cho customer ↔ operator ↔ notification.
+
 ### 2026-07-21 - Dữ liệu thật và header dùng chung cho portal
 
 - Trang chủ `/portal` tải yêu cầu gần đây từ `/api/requests` và lịch sắp tới từ `/api/bookings`; đã loại bỏ các mã yêu cầu, phòng và workshop minh họa khỏi dashboard.
