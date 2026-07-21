@@ -68,6 +68,14 @@ Máy mới cần tạo `.env.local` từ `.env.example`; không sao chép secret
 
 ## Nhật ký bàn giao
 
+### 2026-07-21 - Attachment quarantine và malware scanner adapter
+
+- Upload attachment chuyển sang fail-closed: metadata bắt đầu `quarantined`, API trả HTTP 202, uploader thấy trạng thái đang quét và download tiếp tục chỉ cho `validated`.
+- Thêm scanner adapter HTTPS server-only với timeout 15 giây và contract verdict `clean|infected`; cron `/api/cron/attachment-scan` claim idempotent, tối đa 5 lần thử, audit/notification kết quả, xóa object nhiễm và tạo incident/alert khi hết retry.
+- Thêm migration D1 `0013_attachment_quarantine.sql` và Supabase `202607210015_attachment_quarantine.sql`; cả local và staging đã áp thành công, migration Supabase local/remote đồng bộ đến `202607210015`, JWT/RLS isolation vẫn đạt.
+- Tài liệu cấu hình/activation gate: `docs/attachment-malware-scanning.md`. Scanner credential thật chưa được cấu hình; khi thiếu/lỗi scanner, file luôn ở quarantine, không có fallback tự coi là sạch.
+- Kiểm tra: `npm.cmd run lint` và 65 unit/integration test đạt. Bước tiếp theo: chọn/cấu hình scanner production, chạy EICAR staging và nối incident vào telemetry; sau đó tự động hóa browser E2E trong CI.
+
 ### 2026-07-21 - Supabase staging JWT/RLS isolation
 
 - Xác nhận migration staging đồng bộ đến `202607210013`, sau đó dry-run và áp `202607210014_operational_request_scope.sql` để tách tenant customer-admin khỏi operational team NIC theo `target_department`.

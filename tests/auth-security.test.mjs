@@ -85,7 +85,8 @@ test("request attachments use private R2 with validation, scoped download and au
   assert.match(upload,/enforceRateLimit/);
   assert.match(upload,/validateAttachment/);
   assert.match(upload,/storage\.delete\(objectKey\)/);
-  assert.match(upload,/request\.attachment_uploaded/);
+  assert.match(upload,/request\.attachment_quarantined/);
+  assert.match(upload,/"quarantined"/);
   assert.match(download,/canReadRequest\(user, item\)/);
   assert.match(download,/Cache-Control": "private, no-store/);
   assert.match(download,/X-Content-Type-Options": "nosniff/);
@@ -95,6 +96,24 @@ test("request attachments use private R2 with validation, scoped download and au
   assert.match(rls,/alter table public\.request_attachments force row level security/);
   assert.match(rls,/can_read_service_request/);
   assert.match(rls,/revoke insert,update,delete on public\.request_attachments from anon,authenticated/);
+});
+
+test("attachment malware scanning is fail-closed, retryable and audited",async()=>{
+  const cron=await readFile(new URL("../app/api/cron/attachment-scan/route.ts",import.meta.url),"utf8");
+  const migration=await readFile(new URL("../drizzle/0013_attachment_quarantine.sql",import.meta.url),"utf8");
+  const postgres=await readFile(new URL("../supabase/migrations/202607210015_attachment_quarantine.sql",import.meta.url),"utf8");
+  assert.match(cron,/ATTACHMENT_SCAN_CRON_SECRET/);
+  assert.match(cron,/scanAttachment/);
+  assert.match(cron,/validation_status='quarantined'/);
+  assert.match(cron,/validation_status='validated'/);
+  assert.match(cron,/validation_status='rejected'/);
+  assert.match(cron,/storage\.delete\(item\.objectKey\)/);
+  assert.match(cron,/request\.attachment_validated/);
+  assert.match(cron,/request\.attachment_rejected/);
+  assert.match(cron,/scan_attempts>=5/);
+  assert.match(cron,/operational_incidents/);
+  assert.match(migration,/scan_attempts/);
+  assert.match(postgres,/alter column validation_status set default 'quarantined'/);
 });
 
 test("Supabase request collaboration forces tenant RLS and keeps client writes revoked", async () => {

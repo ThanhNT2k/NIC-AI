@@ -2,7 +2,7 @@ import { MAX_ATTACHMENT_BYTES, safeAttachmentName, validateAttachment } from "@/
 import { currentUser, database, enforceRateLimit, requireCsrf } from "@/lib/d1-auth";
 import { canCommentRequest, canReadRequest, type ScopedRequest } from "@/lib/request-scope";
 
-type AttachmentRow = { id:string;originalName:string;contentType:string;sizeBytes:number;sha256:string;uploadedBy:string;uploaderName:string;createdAt:number };
+type AttachmentRow = { id:string;originalName:string;contentType:string;sizeBytes:number;sha256:string;validationStatus:string;uploadedBy:string;uploaderName:string;createdAt:number };
 
 async function requestItem(id: string) {
   const db = await database();
@@ -27,7 +27,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   const item = await requestItem(id);
   if (!item || !canReadRequest(user, item)) return Response.json({ error: "REQUEST_NOT_FOUND" }, { status: 404 });
   const db = await database();
-  const attachments = await db.prepare("SELECT a.id,a.original_name AS originalName,a.content_type AS contentType,a.size_bytes AS sizeBytes,a.sha256,a.uploaded_by AS uploadedBy,u.full_name AS uploaderName,a.created_at AS createdAt FROM request_attachments a JOIN users u ON u.id=a.uploaded_by WHERE a.request_id=? AND a.validation_status='validated' ORDER BY a.created_at ASC").bind(id).all<AttachmentRow>();
+  const attachments = await db.prepare("SELECT a.id,a.original_name AS originalName,a.content_type AS contentType,a.size_bytes AS sizeBytes,a.sha256,a.validation_status AS validationStatus,a.uploaded_by AS uploadedBy,u.full_name AS uploaderName,a.created_at AS createdAt FROM request_attachments a JOIN users u ON u.id=a.uploaded_by WHERE a.request_id=? AND (a.validation_status='validated' OR (a.validation_status='quarantined' AND a.uploaded_by=?)) ORDER BY a.created_at ASC").bind(id,user.id).all<AttachmentRow>();
   return Response.json({ attachments: attachments.results, permissions: { canUpload: canCommentRequest(user, item) } });
 }
 
@@ -58,12 +58,12 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   const now = Math.floor(Date.now() / 1000);
   try {
     await db.batch([
-      db.prepare("INSERT INTO request_attachments (id,request_id,uploaded_by,object_key,original_name,content_type,size_bytes,sha256,validation_status,created_at) VALUES (?,?,?,?,?,?,?,?,?,?)").bind(attachmentId,id,user.id,objectKey,originalName,file.type,file.size,sha256,"validated",now),
-      db.prepare("INSERT INTO audit_logs (id,actor_id,action,entity_type,entity_id,metadata,created_at) VALUES (?,?,?,?,?,?,?)").bind(crypto.randomUUID(),user.id,"request.attachment_uploaded","service_request",id,JSON.stringify({ attachmentId,contentType:file.type,sizeBytes:file.size,sha256 }),now),
+      db.prepare("INSERT INTO request_attachments (id,request_id,uploaded_by,object_key,original_name,content_type,size_bytes,sha256,validation_status,created_at) VALUES (?,?,?,?,?,?,?,?,?,?)").bind(attachmentId,id,user.id,objectKey,originalName,file.type,file.size,sha256,"quarantined",now),
+      db.prepare("INSERT INTO audit_logs (id,actor_id,action,entity_type,entity_id,metadata,created_at) VALUES (?,?,?,?,?,?,?)").bind(crypto.randomUUID(),user.id,"request.attachment_quarantined","service_request",id,JSON.stringify({ attachmentId,contentType:file.type,sizeBytes:file.size,sha256 }),now),
     ]);
   } catch (cause) {
     await storage.delete(objectKey);
     throw cause;
   }
-  return Response.json({ attachment: { id:attachmentId,originalName,contentType:file.type,sizeBytes:file.size,sha256,uploadedBy:user.id,uploaderName:user.fullName,createdAt:now } }, { status: 201 });
+  return Response.json({ attachment: { id:attachmentId,originalName,contentType:file.type,sizeBytes:file.size,sha256,validationStatus:"quarantined",uploadedBy:user.id,uploaderName:user.fullName,createdAt:now } }, { status: 202 });
 }

@@ -22,7 +22,7 @@ RLS là defense-in-depth, không thay thế authorization tại service layer.
 
 `service_requests`, `request_comments` và metadata `request_attachments` dùng RLS bắt buộc theo owner, organization, assigned user và operational team. Quyền ghi trực tiếp của role `anon`/`authenticated` bị thu hồi; mutation phải đi qua backend sau khi kiểm tra capability, CSRF, trạng thái và ghi audit.
 
-Object attachment nằm trong bucket riêng tư, chỉ tải qua API kiểm tra lại scope của request. Upload giới hạn 8 MB, chỉ nhận PDF/PNG/JPEG/TXT, đối chiếu MIME với magic bytes, chặn executable, active PDF và mẫu kiểm thử EICAR, đồng thời lưu SHA-256. Đây là lớp kiểm tra fail-closed tại ứng dụng; production vẫn MUST nối malware scanner chuyên dụng và quy trình quarantine trước khi mở rộng loại tệp.
+Object attachment nằm trong bucket riêng tư, chỉ tải qua API kiểm tra lại scope của request. Upload giới hạn 8 MB, chỉ nhận PDF/PNG/JPEG/TXT, đối chiếu MIME với magic bytes, chặn executable, active PDF và mẫu kiểm thử EICAR, đồng thời lưu SHA-256. File mới luôn `quarantined`; cron chỉ chuyển sang `validated` sau verdict `clean` rõ ràng từ scanner HTTPS. Lỗi scanner giữ file cách ly để retry; verdict nhiễm xóa object và ghi audit.
 
 Migration hiện tại cho phép update với `with check owner_id = auth.uid()` nhưng enforcement version/confirmation vẫn cần transaction/function phía server. Cần có integration tests chạy với JWT của ít nhất hai user để chứng minh không rò rỉ chéo.
 

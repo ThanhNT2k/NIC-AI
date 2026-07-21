@@ -102,7 +102,10 @@ export const requestAttachments = sqliteTable("request_attachments", {
   contentType: text("content_type").notNull(),
   sizeBytes: integer("size_bytes").notNull(),
   sha256: text("sha256").notNull(),
-  validationStatus: text("validation_status").notNull().default("validated"),
+  validationStatus: text("validation_status").notNull().default("quarantined"),
+  scanAttempts: integer("scan_attempts").notNull().default(0),
+  lastScanError: text("last_scan_error"),
+  scannedAt: integer("scanned_at"),
   createdAt: integer("created_at").notNull(),
 });
 

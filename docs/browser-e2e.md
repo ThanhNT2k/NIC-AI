@@ -13,13 +13,14 @@ Kịch bản này xác minh xuyên vai trò customer → operational team → cu
 ## Kịch bản chuẩn
 
 1. Đăng nhập `thanh@demo.nic.vn`, mở `/portal/requests` và chi tiết request Facility.
-2. Upload fixture TXT; xác minh danh sách có tên file, uploader, kích thước và timeline có `request.attachment_uploaded`.
-3. Gửi comment customer; đăng xuất.
-4. Đăng nhập `facility@demo.nic.vn`; xác minh unread notification tăng và nội dung comment customer đúng.
-5. Mở notification; xác minh URL deep-link đúng request, scope hiển thị là đội phụ trách, attachment có thể tải và comment customer xuất hiện.
-6. Gửi comment Facility; đăng xuất.
-7. Đăng nhập lại customer; xác minh notification mới chứa comment Facility và mở đúng request.
-8. Kiểm tra browser console không có warning/error.
+2. Upload fixture TXT; xác minh danh sách có tên file, uploader, kích thước, trạng thái “Đang quét an toàn” và timeline có `request.attachment_quarantined`.
+3. Chạy cron scan với scanner staging trả verdict `clean`; xác minh file chuyển sang `validated` và có thể tải.
+4. Gửi comment customer; đăng xuất.
+5. Đăng nhập `facility@demo.nic.vn`; xác minh unread notification tăng và nội dung comment customer đúng.
+6. Mở notification; xác minh URL deep-link đúng request, scope hiển thị là đội phụ trách, attachment có thể tải và comment customer xuất hiện.
+7. Gửi comment Facility; đăng xuất.
+8. Đăng nhập lại customer; xác minh notification mới chứa comment Facility và mở đúng request.
+9. Kiểm tra browser console không có warning/error.
 
 ## Kết quả mong đợi
 

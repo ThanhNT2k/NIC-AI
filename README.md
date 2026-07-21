@@ -339,7 +339,7 @@ Operational accounts use the same test password:
 
 ## 7. Testing & Evaluation
 
-Current verified baseline: **63 automated checks passing** (62 unit/integration and 1 rendered-page test).
+Current verified baseline: **66 automated checks passing** (65 unit/integration and 1 rendered-page test).
 
 | Test area | Evidence |
 |---|---|

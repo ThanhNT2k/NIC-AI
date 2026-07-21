@@ -37,7 +37,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   const [comments, timeline, attachments] = await Promise.all([
     db.prepare("SELECT c.id,c.author_id AS authorId,u.full_name AS authorName,u.role AS authorRole,c.body,c.created_at AS createdAt FROM request_comments c JOIN users u ON u.id=c.author_id WHERE c.request_id=? ORDER BY c.created_at ASC").bind(id).all(),
     db.prepare("SELECT a.id,a.action,a.metadata,a.created_at AS createdAt,u.full_name AS actorName FROM audit_logs a JOIN users u ON u.id=a.actor_id WHERE a.entity_type='service_request' AND a.entity_id=? ORDER BY a.created_at ASC").bind(id).all<{ id: string; action: string; metadata: string; createdAt: number; actorName: string }>(),
-    db.prepare("SELECT a.id,a.original_name AS originalName,a.content_type AS contentType,a.size_bytes AS sizeBytes,a.sha256,a.uploaded_by AS uploadedBy,u.full_name AS uploaderName,a.created_at AS createdAt FROM request_attachments a JOIN users u ON u.id=a.uploaded_by WHERE a.request_id=? AND a.validation_status='validated' ORDER BY a.created_at ASC").bind(id).all(),
+    db.prepare("SELECT a.id,a.original_name AS originalName,a.content_type AS contentType,a.size_bytes AS sizeBytes,a.sha256,a.validation_status AS validationStatus,a.uploaded_by AS uploadedBy,u.full_name AS uploaderName,a.created_at AS createdAt FROM request_attachments a JOIN users u ON u.id=a.uploaded_by WHERE a.request_id=? AND (a.validation_status='validated' OR (a.validation_status='quarantined' AND a.uploaded_by=?)) ORDER BY a.created_at ASC").bind(id,user.id).all(),
   ]);
   return Response.json({
     request: item,

@@ -20,6 +20,7 @@ Thư mục này mô tả phương án giải quyết bài toán, kiến trúc m�
 14. [Chẩn đoán runtime và tự động hóa nghiệp vụ](./diagnostics-automation.md)
 15. [Browser E2E cho cộng tác request](./browser-e2e.md)
 16. [Supabase staging và kiểm thử RLS](./supabase-staging.md)
+17. [Quarantine và malware scanning attachment](./attachment-malware-scanning.md)
 
 ## Trạng thái tài liệu
 
