@@ -113,6 +113,18 @@ test("Supabase request collaboration forces tenant RLS and keeps client writes r
   assert.match(migration, /revoke insert,update,delete on public\.service_requests,public\.request_comments from anon,authenticated/);
 });
 
+test("Supabase operational request scope separates tenant administration from NIC teams", async () => {
+  const migration = await readFile(new URL("../supabase/migrations/202607210014_operational_request_scope.sql", import.meta.url), "utf8");
+  assert.match(migration,/membership\.organization_id = request_organization/);
+  assert.match(migration,/membership\.role = 'customer_admin'/);
+  assert.match(migration,/request_department = 'service_desk'/);
+  assert.match(migration,/request_department = 'facility'/);
+  assert.match(migration,/request_department = 'event'/);
+  assert.match(migration,/request_department = 'security'/);
+  assert.match(migration,/security definer/);
+  assert.match(migration,/set search_path = ''/);
+});
+
 test("ERP roles grant capabilities instead of trusting UI role labels", async () => {
   const access = await readFile(new URL("../lib/access-control.ts", import.meta.url), "utf8");
   const auth = await readFile(new URL("../lib/d1-auth.ts", import.meta.url), "utf8");

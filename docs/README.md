@@ -19,6 +19,7 @@ Thư mục này mô tả phương án giải quyết bài toán, kiến trúc m�
 13. [P3 — Procurement và nền tảng enterprise](./P3_ENTERPRISE_PROCUREMENT.md)
 14. [Chẩn đoán runtime và tự động hóa nghiệp vụ](./diagnostics-automation.md)
 15. [Browser E2E cho cộng tác request](./browser-e2e.md)
+16. [Supabase staging và kiểm thử RLS](./supabase-staging.md)
 
 ## Trạng thái tài liệu
 

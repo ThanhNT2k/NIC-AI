@@ -68,6 +68,14 @@ Máy mới cần tạo `.env.local` từ `.env.example`; không sao chép secret
 
 ## Nhật ký bàn giao
 
+### 2026-07-21 - Supabase staging JWT/RLS isolation
+
+- Xác nhận migration staging đồng bộ đến `202607210013`, sau đó dry-run và áp `202607210014_operational_request_scope.sql` để tách tenant customer-admin khỏi operational team NIC theo `target_department`.
+- Thêm `scripts/test-supabase-rls.mjs`: tạo bốn Auth identity tạm, ba organization, request/comment/attachment fixture, đăng nhập bằng JWT thật và cleanup trong `finally`; request API có timeout 20 giây để fail-fast.
+- Kiểm thử staging đạt hai lần và cleanup thành công: hai customer cô lập tenant; Facility đọc đúng queue Facility xuyên organization; Event không đọc queue Facility; attachment quarantined bị ẩn; authenticated direct write bị chặn; anon không đọc được request. Migration local/remote đồng bộ đến `202607210014`.
+- Thêm workflow thủ công `Supabase staging RLS` dùng GitHub Environment `staging`, không log secret và không chạy trên pull request fork. Metadata `supabase/.temp` được Git ignore.
+- Tài liệu vận hành: `docs/supabase-staging.md`. Bước tiếp theo: tích hợp malware scanner/quarantine production, sau đó tự động hóa browser E2E trong CI và hoàn thiện OIDC/monitoring/backup-restore gate.
+
 ### 2026-07-21 - Browser E2E customer ↔ Facility ↔ notification ↔ attachment
 
 - Kiểm thử trực tiếp trên browser local bằng request Facility thật: customer upload fixture TXT, thấy metadata và audit timeline, sau đó gửi comment.
