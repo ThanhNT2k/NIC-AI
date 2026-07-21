@@ -70,6 +70,17 @@ Máy mới cần tạo `.env.local` từ `.env.example`; không sao chép secret
 
 ## Nhật ký bàn giao
 
+### 2026-07-21 - Hoàn thành P3 procurement và nền tảng enterprise từ Kanban #12–#13
+
+- Thêm migration D1 `0009` cho contract, PO/approval, goods receipt, supplier invoice, three-way match, exception, OIDC login attempt, account lifecycle, observability, incident, retention và legal hold.
+- Thêm `/portal/procurement` cùng `/api/procurement`; mọi write action dùng session, CSRF, rate limit, capability, organization scope, idempotency và audit. PO áp dụng maker-checker; receipt chặn vượt số lượng; invoice match theo tolerance và tự tạo exception/incident khi lệch.
+- Thêm OIDC Authorization Code + PKCE S256, state/nonce một lần, kiểm chữ ký JWKS/issuer/audience/expiry, allowed domain và MFA bắt buộc cho vai trò đặc quyền; password login nội bộ có thể tắt bằng `ENTERPRISE_AUTH_REQUIRED=1`.
+- Thêm migration PostgreSQL production `202607210009_p3_enterprise.sql` với `FORCE ROW LEVEL SECURITY`, tenant/provider policy và revoke client writes.
+- Thêm structured observability với correlation/trace, redaction secret/PII, retention cron dry-run mặc định, legal hold, archive metadata an toàn và runbook cho procurement exception/retention failure.
+- Tài liệu triển khai và vận hành: `docs/P3_ENTERPRISE_PROCUREMENT.md`, `docs/runbooks/procurement-exception.md`, `docs/runbooks/retention-failure.md`.
+- Đã áp migration local; đăng nhập Facility và API procurement trả 200 với 2 provider; `npm run lint`, `npm test` đạt 47 unit/integration test + 1 rendered HTML, production build thành công.
+- Việc tiếp theo: cấu hình OIDC và `RETENTION_CRON_SECRET` trên production, nối alert/export telemetry với hệ thống giám sát thật, chạy retention dry-run được phê duyệt trước lần xóa đầu tiên.
+
 ### 2026-07-21 - Hoàn thành P2 danh mục vận hành từ Kanban #6–#11
 
 - Thêm migration `0008` cho asset hierarchy/warranty/owner, preventive maintenance, snapshot chi phí work order, event template/checklist/budget, visitor QR/badge/access controller, master data effective-date và analytics.

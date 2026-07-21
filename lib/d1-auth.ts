@@ -51,12 +51,12 @@ export async function verifyPassword(password: string, expectedHash: string, sal
   return constantTimeEqual(actual, base64ToBytes(expectedHash));
 }
 
-export async function createSession(userId: string) {
+export async function createSession(userId: string, options: { authMethod?: "password" | "oidc"; mfaVerified?: boolean } = {}) {
   const token = bytesToBase64(crypto.getRandomValues(new Uint8Array(32)));
   const csrfToken = bytesToBase64(crypto.getRandomValues(new Uint8Array(24)));
   const now = Math.floor(Date.now() / 1000);
   const db = await database();
-  await db.prepare("INSERT INTO sessions (id, user_id, token_hash, csrf_hash, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?)").bind(crypto.randomUUID(), userId, await sha256(token), await sha256(csrfToken), now + SESSION_TTL_SECONDS, now).run();
+  await db.prepare("INSERT INTO sessions (id,user_id,token_hash,csrf_hash,auth_method,mfa_verified,expires_at,created_at) VALUES (?,?,?,?,?,?,?,?)").bind(crypto.randomUUID(),userId,await sha256(token),await sha256(csrfToken),options.authMethod??"password",options.mfaVerified?1:0,now+SESSION_TTL_SECONDS,now).run();
   return { token, csrfToken, maxAge: SESSION_TTL_SECONDS };
 }
 
@@ -104,7 +104,7 @@ export async function currentUser(request: Request): Promise<SessionUser | null>
   if (!token) return null;
   const now = Math.floor(Date.now() / 1000);
   const db = await database();
-  const row = await db.prepare("SELECT u.id, u.email, u.full_name AS fullName, COALESCE(m.organization, u.organization) AS organization, COALESCE(m.role, u.role) AS role, d.code AS departmentCode FROM sessions s JOIN users u ON u.id = s.user_id LEFT JOIN organization_memberships m ON m.user_id = u.id AND m.status = 'active' LEFT JOIN departments d ON d.id = m.department_id WHERE s.token_hash = ? AND s.expires_at > ?").bind(await sha256(token), now).first<SessionUserRow>();
+  const row = await db.prepare("SELECT u.id, u.email, u.full_name AS fullName, COALESCE(m.organization, u.organization) AS organization, COALESCE(m.role, u.role) AS role, d.code AS departmentCode FROM sessions s JOIN users u ON u.id = s.user_id LEFT JOIN organization_memberships m ON m.user_id = u.id AND m.status = 'active' LEFT JOIN departments d ON d.id = m.department_id WHERE s.token_hash = ? AND s.expires_at > ? AND u.account_status='active'").bind(await sha256(token), now).first<SessionUserRow>();
   return row ? { ...row, capabilities: capabilitiesFor(row.role) } : null;
 }
 
@@ -125,7 +125,7 @@ export async function requireCsrf(request: Request) {
   const headerToken = request.headers.get("x-csrf-token");
   if (!sessionToken || !csrfToken || !headerToken || csrfToken !== headerToken) return null;
   const now = Math.floor(Date.now() / 1000); const db = await database();
-  const row = await db.prepare("SELECT u.id, u.email, u.full_name AS fullName, COALESCE(m.organization, u.organization) AS organization, COALESCE(m.role, u.role) AS role, d.code AS departmentCode FROM sessions s JOIN users u ON u.id = s.user_id LEFT JOIN organization_memberships m ON m.user_id = u.id AND m.status = 'active' LEFT JOIN departments d ON d.id = m.department_id WHERE s.token_hash = ? AND s.csrf_hash = ? AND s.expires_at > ?").bind(await sha256(sessionToken), await sha256(csrfToken), now).first<SessionUserRow>();
+  const row = await db.prepare("SELECT u.id, u.email, u.full_name AS fullName, COALESCE(m.organization, u.organization) AS organization, COALESCE(m.role, u.role) AS role, d.code AS departmentCode FROM sessions s JOIN users u ON u.id = s.user_id LEFT JOIN organization_memberships m ON m.user_id = u.id AND m.status = 'active' LEFT JOIN departments d ON d.id = m.department_id WHERE s.token_hash = ? AND s.csrf_hash = ? AND s.expires_at > ? AND u.account_status='active'").bind(await sha256(sessionToken), await sha256(csrfToken), now).first<SessionUserRow>();
   return row ? { ...row, capabilities: capabilitiesFor(row.role) } : null;
 }
 

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import "./p2.css";
+import "./p3.css";
+import "./enterprise.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://nic-service-hub.ntt-121020.chatgpt.site"),

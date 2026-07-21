@@ -117,3 +117,36 @@ test("Copilot remains authenticated and has no submit capability", async () => {
   assert.match(route, /localUnderstanding/);
   assert.doesNotMatch(route, /submit_request|service_requests|INSERT INTO/);
 });
+
+test("enterprise login uses OIDC code flow, PKCE, nonce, signature validation and MFA",async()=>{
+  const start=await readFile(new URL("../app/api/auth/enterprise/start/route.ts",import.meta.url),"utf8");
+  const callback=await readFile(new URL("../app/api/auth/enterprise/callback/route.ts",import.meta.url),"utf8");
+  const oidc=await readFile(new URL("../lib/oidc.ts",import.meta.url),"utf8");
+  assert.match(start,/code_challenge_method","S256/);
+  assert.match(start,/nonce_hash/);
+  assert.match(callback,/consumed_at IS NULL/);
+  assert.match(callback,/MFA_REQUIRED/);
+  assert.match(callback,/email_verified/);
+  assert.match(oidc,/RSASSA-PKCS1-v1_5/);
+  assert.match(oidc,/claims\.iss/);
+  assert.match(oidc,/audience\.includes\(clientId\)/);
+  assert.doesNotMatch(callback,/console\.log/);
+});
+
+test("P3 routes enforce backend authorization, correlation, redaction and retention dry-run",async()=>{
+  const procurement=await readFile(new URL("../app/api/procurement/route.ts",import.meta.url),"utf8");
+  const retention=await readFile(new URL("../app/api/cron/retention/route.ts",import.meta.url),"utf8");
+  const observability=await readFile(new URL("../lib/observability.ts",import.meta.url),"utf8");
+  const rls=await readFile(new URL("../supabase/migrations/202607210009_p3_enterprise.sql",import.meta.url),"utf8");
+  for(const capability of ["procurement:manage","procurement:approve","procurement:receive","procurement:invoice"])assert.match(procurement,new RegExp(capability));
+  assert.match(procurement,/requireCsrf\(request\)/);
+  assert.match(procurement,/idempotency-key/);
+  assert.match(retention,/dryRun/);
+  assert.match(retention,/legal_holds/);
+  assert.match(observability,/redactForLog/);
+  assert.match(observability,/x-correlation-id/);
+  assert.doesNotMatch(observability,/request\.headers\.get\("authorization"\)/);
+  for(const table of ["purchase_orders","supplier_invoices","procurement_exceptions"])assert.match(rls,new RegExp(`alter table public\\.${table} force row level security`));
+  assert.match(rls,/is_active_provider_member/);
+  assert.match(rls,/revoke all on public\.retention_job_runs/);
+});

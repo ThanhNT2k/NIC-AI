@@ -6,7 +6,7 @@ import test from "node:test";
 async function migratedDatabase() {
   const database = new DatabaseSync(":memory:");
   database.exec("PRAGMA foreign_keys = ON");
-  for (const migration of ["0000_round_wrecker.sql", "0001_clumsy_black_crow.sql", "0002_stiff_moon_knight.sql", "0003_erp_access_routing.sql", "0004_brief_rockslide.sql", "0005_coordination_mvp.sql", "0006_coordination_demo_accounts.sql", "0007_p1_operational_reliability.sql", "0008_p2_operational_portfolio.sql"]) {
+  for (const migration of ["0000_round_wrecker.sql", "0001_clumsy_black_crow.sql", "0002_stiff_moon_knight.sql", "0003_erp_access_routing.sql", "0004_brief_rockslide.sql", "0005_coordination_mvp.sql", "0006_coordination_demo_accounts.sql", "0007_p1_operational_reliability.sql", "0008_p2_operational_portfolio.sql", "0009_p3_enterprise_procurement.sql"]) {
     const sql = await readFile(new URL(`../drizzle/${migration}`, import.meta.url), "utf8");
     database.exec(sql.replaceAll("--> statement-breakpoint", ""));
   }
@@ -114,4 +114,38 @@ test("P2 schema protects cost snapshots, QR replay and maker-checker",async()=>{
   database.prepare("UPDATE visitor_qr_tokens SET redeemed_at=100,redeemed_by='demo-security-001' WHERE id='qr-p2'").run();
   assert.throws(()=>database.prepare("UPDATE visitor_qr_tokens SET redeemed_at=101 WHERE id='qr-p2'").run(),/QR_ALREADY_REDEEMED/);
   assert.throws(()=>database.prepare("INSERT INTO master_data_records (id,entity_type,record_key,version,status,owner_id,effective_from,payload,reason,maker_id,checker_id,created_at) VALUES ('md-self','cost_catalog','SELF',1,'approved','demo-system-admin-001',1,'{}','test','demo-system-admin-001','demo-system-admin-001',1)").run(),/CHECK/);
+});
+
+test("P3 procurement schema guards approval, receipt quantity and idempotency",async()=>{
+  const database=await migratedDatabase();
+  const tables=database.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(row=>row.name);
+  for(const name of ["procurement_contracts","purchase_orders","purchase_order_lines","purchase_order_approvals","goods_receipts","goods_receipt_lines","supplier_invoices","three_way_matches","procurement_exceptions","retention_job_runs","observability_events","operational_incidents"])assert.ok(tables.includes(name),name);
+  database.prepare("INSERT INTO service_drafts (id,owner_id,service_type,title,details,status,version,confirmed_version,created_at,updated_at) VALUES ('p3-draft','demo-facility-001','support','P3','P3','submitted',1,1,1,1)").run();
+  database.prepare("INSERT INTO service_requests (id,draft_id,owner_id,organization,service_type,title,details,status,target_department,requester_role,visibility,idempotency_key,created_at,updated_at) VALUES ('p3-request','p3-draft','demo-facility-001','NIC','support','P3','P3','in_progress','facility','facility_manager','internal','p3-request-key',1,1)").run();
+  database.prepare("INSERT INTO maintenance_work_orders (id,request_id,title,location,priority,status,created_by,created_at,updated_at) VALUES ('p3-wo','p3-request','P3','NIC','normal','open','demo-facility-001',1,1)").run();
+  database.prepare("INSERT INTO purchase_orders (id,organization,po_number,version,provider_id,work_order_id,status,currency,subtotal_minor,approval_threshold_minor,idempotency_key,created_by,created_at,updated_at) VALUES ('po-p3','NIC','PO-P3',1,'provider-building-mvp','p3-wo','pending_approval','VND',60000000,50000000,'p3-idempotency','demo-facility-001',1,1)").run();
+  database.prepare("INSERT INTO purchase_order_lines (id,purchase_order_id,line_number,description,line_type,quantity_milli,unit,unit_price_minor,line_total_minor) VALUES ('po-line-p3','po-p3',1,'Thiết bị','material',1000,'bộ',60000000,60000000)").run();
+  database.prepare("INSERT INTO purchase_order_approvals (id,purchase_order_id,requested_by,requested_at,status) VALUES ('po-approval-p3','po-p3','demo-facility-001',1,'pending')").run();
+  assert.throws(()=>database.prepare("UPDATE purchase_orders SET status='issued' WHERE id='po-p3'").run(),/PO_APPROVAL_REQUIRED/);
+  assert.throws(()=>database.prepare("UPDATE purchase_order_approvals SET status='approved',decided_by='demo-facility-001' WHERE id='po-approval-p3'").run(),/CHECK/);
+  database.prepare("UPDATE purchase_order_approvals SET status='approved',decided_by='demo-system-admin-001' WHERE id='po-approval-p3'").run();
+  database.prepare("UPDATE purchase_orders SET status='approved',approved_by='demo-system-admin-001' WHERE id='po-p3'").run();
+  database.prepare("UPDATE purchase_orders SET status='issued' WHERE id='po-p3'").run();
+  database.prepare("INSERT INTO goods_receipts (id,purchase_order_id,receipt_number,status,received_at,idempotency_key,received_by,created_at) VALUES ('gr-p3','po-p3','GR-P3','posted',2,'receipt-key-p3','demo-facility-001',2)").run();
+  assert.throws(()=>database.prepare("INSERT INTO goods_receipt_lines (id,receipt_id,purchase_order_line_id,quantity_received_milli,condition) VALUES ('gr-line-over','gr-p3','po-line-p3',1001,'accepted')").run(),/RECEIPT_EXCEEDS_PO/);
+  database.prepare("INSERT INTO goods_receipt_lines (id,receipt_id,purchase_order_line_id,quantity_received_milli,condition) VALUES ('gr-line-p3','gr-p3','po-line-p3',1000,'accepted')").run();
+  assert.throws(()=>database.prepare("INSERT INTO purchase_orders (id,organization,po_number,version,provider_id,work_order_id,status,currency,subtotal_minor,approval_threshold_minor,idempotency_key,created_by,created_at,updated_at) VALUES ('po-p3-duplicate','NIC','PO-P3-2',1,'provider-building-mvp','p3-wo','approved','VND',1,50000000,'p3-idempotency','demo-facility-001',1,1)").run(),/UNIQUE/);
+  assert.equal(database.prepare("SELECT price_tolerance_bps AS tolerance FROM finance_policies WHERE organization='NIC'").get().tolerance,500);
+});
+
+test("P3 enterprise schema supports account lifecycle, legal hold and correlation",async()=>{
+  const database=await migratedDatabase();
+  const userColumns=database.prepare("PRAGMA table_info('users')").all().map(row=>row.name);
+  for(const column of ["account_status","identity_provider","identity_subject","mfa_required"])assert.ok(userColumns.includes(column),column);
+  const sessionColumns=database.prepare("PRAGMA table_info('sessions')").all().map(row=>row.name);
+  for(const column of ["auth_method","mfa_verified"])assert.ok(sessionColumns.includes(column),column);
+  database.prepare("INSERT INTO legal_holds (id,entity_type,entity_id,reason,status,created_by,created_at) VALUES ('hold-p3','visitor_qr_token','qr-p2','Investigation','active','demo-system-admin-001',1)").run();
+  assert.throws(()=>database.prepare("INSERT INTO legal_holds (id,entity_type,entity_id,reason,status,created_by,created_at) VALUES ('hold-p3-2','visitor_qr_token','qr-p2','Duplicate','active','demo-system-admin-001',1)").run(),/UNIQUE/);
+  database.prepare("INSERT INTO observability_events (id,correlation_id,trace_id,level,event_name,route,metadata,created_at) VALUES ('obs-p3','corr-p3','trace-p3','info','test','/test','{}',1)").run();
+  assert.equal(database.prepare("SELECT correlation_id AS correlationId FROM observability_events WHERE id='obs-p3'").get().correlationId,"corr-p3");
 });

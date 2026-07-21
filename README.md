@@ -138,6 +138,7 @@ Submit requires ownership, the current confirmed version and an idempotency key.
 | `/portal/coordination` | Visitor registration/check-in and event/catering coordination |
 | `/portal/reliability` | SLA automation, provider response, resource scheduling and access review |
 | `/portal/portfolio` | Asset/PM, cost, event template, visitor device, master data and analytics P2 |
+| `/portal/procurement` | Contract, PO approval, receipt, invoice and three-way match P3 |
 | `/portal/help` | Help center and Copilot entry point |
 
 ---
@@ -334,7 +335,7 @@ Operational accounts use the same test password:
 
 ## 7. Testing & Evaluation
 
-Current verified baseline: **36 automated tests passing** (35 unit/integration and 1 rendered-page test).
+Current verified baseline: **48 automated tests passing** (47 unit/integration and 1 rendered-page test).
 
 | Test area | Evidence |
 |---|---|
@@ -427,12 +428,12 @@ Before production completion, the project still requires an approved identity pr
 2. Event templates/dependencies/budget approval and visitor QR/badge/access-zone workflow.
 3. Effective-dated master data with maker-checker and authorized operational analytics.
 
-#### P3 — AI and production readiness
+#### P3 — Procurement and enterprise platform (implemented foundation)
 
-1. Versioned knowledge base with hybrid retrieval and verified citations.
-2. `check_availability` and `create_request_draft` application tools.
-3. Hand-labeled Copilot evaluation set and regression thresholds.
-4. Approved production identity, MFA, observability, backup and accessibility audit.
+1. Contract/PO/receipt/invoice with approval, idempotency and three-way match exception workflow.
+2. Configurable OIDC SSO + MFA policy, PostgreSQL tenant/provider RLS and client-write revocation.
+3. Correlation/trace, structured redacted events, incident runbooks and legal-hold-aware retention dry-run.
+4. Remaining production activation: approved IdP credentials, monitoring export/alert destination, backup/restore drill and accessibility audit.
 
 ---
 
