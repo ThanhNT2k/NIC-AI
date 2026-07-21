@@ -157,6 +157,8 @@ export function ConciergeWorkspace({ view = "home" }: { view?: PortalView }) {
   const [copilotOpen, setCopilotOpen] = useState(false);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [draftMessage, setDraftMessage] = useState("");
+  const [draftError, setDraftError] = useState(false);
+  const [draftPending, setDraftPending] = useState(false);
   const [activeDraft, setActiveDraft] = useState<Draft | null>(null);
 
   useEffect(() => { fetch("/api/auth/session").then(async response => { if (response.ok) setUser((await response.json()).user); }).finally(() => setAuthChecked(true)); }, []);
@@ -168,15 +170,21 @@ export function ConciergeWorkspace({ view = "home" }: { view?: PortalView }) {
   async function revokeAllSessions() { if (!window.confirm("Đăng xuất tài khoản này trên tất cả thiết bị?")) return; await fetch("/api/auth/revoke-all", { method: "POST", headers: csrfHeaders() }); setUser(null); }
   async function createDraft(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); if (!selectedService) return;
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const registration = serviceForms[selectedService.type];
     const structuredDetails = registration.fields.map(field => `${field.label}: ${String(form.get(field.name) ?? "").trim()}`);
     structuredDetails.push(`${registration.detailsLabel}: ${String(form.get("details") ?? "").trim()}`);
-    const response = await fetch("/api/service-drafts", { method: "POST", headers: csrfHeaders({ "Content-Type": "application/json" }), body: JSON.stringify({ serviceType: selectedService.type, title: form.get("title"), details: structuredDetails.join("\n") }) });
-    const data = await response.json();
-    if (!response.ok) return setDraftMessage(data.error ?? "Không thể lưu bản nháp.");
-    setActiveDraft(data.draft); setDraftMessage("Đã lưu bản nháp. Hãy kiểm tra thông tin và xác nhận phiên bản hiện tại.");
-    event.currentTarget.reset();
+    setDraftPending(true); setDraftError(false); setDraftMessage("");
+    try {
+      const response = await fetch("/api/service-drafts", { method: "POST", headers: csrfHeaders({ "Content-Type": "application/json" }), body: JSON.stringify({ serviceType: selectedService.type, title: form.get("title"), details: structuredDetails.join("\n") }) });
+      const data = await readApiPayload(response);
+      if (!response.ok || !data.draft) { setDraftError(true); setDraftMessage(data.error ?? "Không thể lưu bản nháp. Vui lòng thử lại."); return; }
+      formElement.reset();
+      setActiveDraft(data.draft); setDraftMessage("Đã lưu bản nháp. Hãy kiểm tra thông tin và xác nhận phiên bản hiện tại.");
+    } catch {
+      setDraftError(true); setDraftMessage("Không thể kết nối máy chủ. Vui lòng kiểm tra kết nối và thử lại.");
+    } finally { setDraftPending(false); }
   }
   async function confirmDraft() {
     if (!activeDraft) return; const response = await fetch(`/api/service-drafts/${activeDraft.id}/confirm`, { method: "POST", headers: csrfHeaders({ "Content-Type": "application/json" }), body: JSON.stringify({ version: activeDraft.version }) }); const data = await response.json();
@@ -208,7 +216,7 @@ export function ConciergeWorkspace({ view = "home" }: { view?: PortalView }) {
       <footer className="scope-note"><span>i</span><p>Bạn đang sử dụng dịch vụ trong phạm vi <strong>{user.organization} tại NIC Hòa Lạc</strong>.</p><button onClick={revokeAllSessions}>Đăng xuất mọi thiết bị</button></footer>
     </section>
     <CopilotDrawer open={copilotOpen} onClose={() => setCopilotOpen(false)} onSelectService={type => { const service = services.find(item => item.type === type); if (service) { setSelectedService(service); setActiveDraft(null); setDraftMessage(""); } }} />
-    {selectedService && <div className="service-modal-layer" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setSelectedService(null); }}><section className="service-modal" role="dialog" aria-modal="true" aria-labelledby="service-modal-title"><header><div><span>{activeDraft ? `BẢN NHÁP V${activeDraft.version}` : serviceForms[selectedService.type].eyebrow}</span><h2 id="service-modal-title">{selectedService.title}</h2></div><button onClick={() => setSelectedService(null)} aria-label="Đóng biểu mẫu">×</button></header><p>{selectedService.copy} Thông tin chỉ được gửi sau khi bạn xác nhận đúng phiên bản hiện tại.</p>{!activeDraft ? <form onSubmit={createDraft}><label>Tiêu đề<input name="title" required minLength={3} maxLength={120} placeholder="Tóm tắt nhu cầu của bạn" /></label><ServiceRegistrationFields service={selectedService} />{draftMessage && <p className="form-message" role="status">{draftMessage}</p>}<div><button type="button" onClick={() => setSelectedService(null)}>Để sau</button><button type="submit">Tiếp tục xác nhận</button></div></form> : <div className="draft-review"><div><span>Trạng thái</span><strong>{activeDraft.status === "submitted" ? "Đã gửi" : activeDraft.confirmedVersion === activeDraft.version ? "Đã xác nhận" : "Chờ xác nhận"}</strong></div>{draftMessage && <p className="form-message" role="status">{draftMessage}</p>}<div className="draft-actions"><button onClick={() => setSelectedService(null)}>Đóng</button>{activeDraft.status !== "submitted" && activeDraft.confirmedVersion !== activeDraft.version && <button onClick={confirmDraft}>Tôi đã kiểm tra, xác nhận</button>}{activeDraft.status !== "submitted" && activeDraft.confirmedVersion === activeDraft.version && <button className="submit-request" onClick={submitDraft}>Gửi yêu cầu chính thức</button>}</div></div>}</section></div>}
+    {selectedService && <div className="service-modal-layer" role="presentation" onMouseDown={event => { if (!draftPending && event.target === event.currentTarget) setSelectedService(null); }}><section className="service-modal" role="dialog" aria-modal="true" aria-labelledby="service-modal-title" aria-busy={draftPending}><header><div><span>{activeDraft ? `BẢN NHÁP V${activeDraft.version}` : serviceForms[selectedService.type].eyebrow}</span><h2 id="service-modal-title">{selectedService.title}</h2></div><button disabled={draftPending} onClick={() => setSelectedService(null)} aria-label="Đóng biểu mẫu">×</button></header><p>{selectedService.copy} Thông tin chỉ được gửi sau khi bạn xác nhận đúng phiên bản hiện tại.</p>{!activeDraft ? <form onSubmit={createDraft}><label>Tiêu đề<input name="title" required minLength={3} maxLength={120} placeholder="Tóm tắt nhu cầu của bạn" /></label><ServiceRegistrationFields service={selectedService} />{draftMessage && <p className={`form-message ${draftError ? "error" : ""}`} role={draftError ? "alert" : "status"}>{draftMessage}</p>}<div className="service-form-actions"><button type="button" disabled={draftPending} onClick={() => setSelectedService(null)}>Để sau</button><button type="submit" disabled={draftPending}>{draftPending ? "Đang lưu..." : "Tiếp tục xác nhận"}</button></div></form> : <div className="draft-review"><div><span>Trạng thái</span><strong>{activeDraft.status === "submitted" ? "Đã gửi" : activeDraft.confirmedVersion === activeDraft.version ? "Đã xác nhận" : "Chờ xác nhận"}</strong></div>{draftMessage && <p className="form-message" role="status">{draftMessage}</p>}<div className="draft-actions"><button onClick={() => setSelectedService(null)}>Đóng</button>{activeDraft.status !== "submitted" && activeDraft.confirmedVersion !== activeDraft.version && <button onClick={confirmDraft}>Tôi đã kiểm tra, xác nhận</button>}{activeDraft.status !== "submitted" && activeDraft.confirmedVersion === activeDraft.version && <button className="submit-request" onClick={submitDraft}>Gửi yêu cầu chính thức</button>}</div></div>}</section></div>}
   </main>;
 }
 

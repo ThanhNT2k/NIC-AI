@@ -68,6 +68,14 @@ Máy mới cần tạo `.env.local` từ `.env.example`; không sao chép secret
 
 ## Nhật ký bàn giao
 
+### 2026-07-21 - Sửa layout và submit form dịch vụ
+
+- Sửa xung đột specificity khiến `.service-form-grid` bị `display:flex` và ép bốn trường trên cùng một hàng; form dùng grid 2 cột desktop, 1 cột dưới 620px, control có `min-width:0` và chiều cao nhất quán.
+- Sửa `createDraft` không đọc `event.currentTarget` sau `await`; giữ tham chiếu form trước request, reset trước khi chuyển sang màn hình review và xử lý response/network error an toàn.
+- Thêm trạng thái `Đang lưu...`, vô hiệu hóa thao tác đóng/submit trong lúc request và hiển thị lỗi inline có `role=alert`.
+- Kiểm thử browser local: desktop không còn chồng trường; viewport 390px có `overlaps: []`, không tràn ngang; lưu draft thành công tới `BẢN NHÁP V1`, console không có error.
+- Kiểm tra tự động: `npm run lint` đạt; `npm test` đạt 52 unit/integration test, production build và rendered HTML test.
+
 ### 2026-07-21 - Chẩn đoán stack trace, retrieval và tự động triage
 
 - Loại bỏ taxonomy `pwd/password` gây GitGuardian false positive; session auth method dùng `local/federated`, migration `0010` chuyển tương thích dữ liệu `oidc` cũ.

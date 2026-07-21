@@ -91,10 +91,17 @@ test("write routes require CSRF and distributed rate limits", async () => {
 
 test("common services expose dedicated registration fields", async () => {
   const workspace = await readFile(new URL("../app/components/ConciergeWorkspace.tsx", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const createDraftSource = workspace.slice(workspace.indexOf("async function createDraft"), workspace.indexOf("async function confirmDraft"));
   for (const serviceType of ["space_booking", "support", "event_registration", "access_card"]) assert.match(workspace, new RegExp(`${serviceType}:`));
   for (const field of ["Ngày sử dụng", "Nhóm hỗ trợ", "Ngày tham dự", "Loại yêu cầu"]) assert.match(workspace, new RegExp(field));
   assert.match(workspace, /ServiceRegistrationFields service=\{selectedService\}/);
   assert.match(workspace, /structuredDetails\.join\("\\n"\)/);
+  assert.match(workspace, /const formElement = event\.currentTarget/);
+  assert.match(workspace, /formElement\.reset\(\)/);
+  assert.doesNotMatch(createDraftSource, /event\.currentTarget\.reset\(\)/);
+  assert.match(styles, /form>div\.service-form-grid\{display:grid/);
+  assert.match(styles, /grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
 });
 
 test("public home routes authentication and portal navigation explicitly", async () => {
