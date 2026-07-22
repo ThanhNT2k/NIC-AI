@@ -68,6 +68,12 @@ Máy mới cần tạo `.env.local` từ `.env.example`; không sao chép secret
 
 ## Nhật ký bàn giao
 
+### 2026-07-22 - Vá advisory libvips/sharp production dependency
+
+- `npm audit --omit=dev` phát hiện `sharp@0.34.5` qua Next/Miniflare chịu các advisory libvips; không dùng `npm audit fix --force` vì npm đề xuất hạ Next xuống 14.
+- Thêm npm override `sharp@0.35.3`, cập nhật lockfile; Next giữ nguyên `16.2.6`, cả Next và Miniflare dedupe về bản sharp đã vá.
+- Kiểm tra: `npm audit --omit=dev` đạt `0 vulnerabilities`; `npm.cmd run lint` đạt; `npm.cmd test` đạt 65 unit/integration test, production build và rendered HTML test.
+
 ### 2026-07-21 - Attachment quarantine và malware scanner adapter
 
 - Upload attachment chuyển sang fail-closed: metadata bắt đầu `quarantined`, API trả HTTP 202, uploader thấy trạng thái đang quét và download tiếp tục chỉ cho `validated`.
