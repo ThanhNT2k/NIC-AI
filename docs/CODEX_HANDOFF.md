@@ -68,6 +68,16 @@ Máy mới cần tạo `.env.local` từ `.env.example`; không sao chép secret
 
 ## Nhật ký bàn giao
 
+### 2026-07-26 - Chạy nguyên bản Cloudflare build trên VM demo
+
+- Thêm `wrangler.vm.jsonc` để chạy `dist/server/index.js` cùng assets, D1 và R2
+  local trên VM qua Wrangler thay vì `vinext start` không hỗ trợ
+  `cloudflare:workers`.
+- Thêm `npm run db:vm:migrate` và `npm run start:vm`; state bền vững nằm trong
+  `.wrangler/state` và cần được sao lưu.
+- Đây là lựa chọn đơn giản cho site demo không có người dùng; production có tải
+  thật vẫn nên dùng Cloudflare managed runtime.
+
 ### 2026-07-26 - Sửa đăng nhập sau reverse proxy trên VM
 
 - Sửa kiểm tra same-origin để chấp nhận origin public khai báo bằng `APP_ORIGIN`
