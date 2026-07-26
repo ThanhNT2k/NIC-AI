@@ -73,6 +73,8 @@ Máy mới cần tạo `.env.local` từ `.env.example`; không sao chép secret
 - Thêm `wrangler.vm.jsonc` để chạy `dist/server/index.js` cùng assets, D1 và R2
   local trên VM qua Wrangler thay vì `vinext start` không hỗ trợ
   `cloudflare:workers`.
+- Compatibility date của runtime VM được ghim ở `2026-05-22`, là ngày mới nhất
+  mà workerd đi kèm Wrangler hiện tại trên VM hỗ trợ.
 - Thêm `npm run db:vm:migrate` và `npm run start:vm`; state bền vững nằm trong
   `.wrangler/state` và cần được sao lưu.
 - Đây là lựa chọn đơn giản cho site demo không có người dùng; production có tải
