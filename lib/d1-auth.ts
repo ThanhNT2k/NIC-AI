@@ -113,9 +113,46 @@ export async function deleteCurrentSession(request: Request) {
   if (token) { const db = await database(); await db.prepare("DELETE FROM sessions WHERE token_hash = ?").bind(await sha256(token)).run(); }
 }
 
+function normalizedOrigin(value: string | null | undefined) {
+  if (!value) return null;
+  try {
+    const url = new URL(value.trim());
+    if (!new Set(["http:", "https:"]).has(url.protocol) || url.username || url.password || url.pathname !== "/" || url.search || url.hash) return null;
+    return url.origin;
+  } catch {
+    return null;
+  }
+}
+
+function forwardedOrigin(request: Request) {
+  const forwarded = request.headers.get("forwarded")?.split(",")[0];
+  if (forwarded) {
+    const values = new Map(forwarded.split(";").map((part) => {
+      const [key, ...rest] = part.trim().split("=");
+      return [key.toLowerCase(), rest.join("=").replace(/^"|"$/g, "")];
+    }));
+    const proto = values.get("proto");
+    const host = values.get("host");
+    const origin = normalizedOrigin(proto && host ? `${proto}://${host}` : null);
+    if (origin) return origin;
+  }
+
+  const proto = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
+  const host = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
+  return normalizedOrigin(proto && host ? `${proto}://${host}` : null);
+}
+
 export function validRequestOrigin(request: Request) {
-  const origin = request.headers.get("origin");
-  return origin !== null && origin === new URL(request.url).origin;
+  const origin = normalizedOrigin(request.headers.get("origin"));
+  if (!origin) return false;
+
+  const allowedOrigins = [
+    normalizedOrigin(process.env.APP_ORIGIN),
+    new URL(request.url).origin,
+    forwardedOrigin(request),
+  ].filter((value): value is string => Boolean(value));
+
+  return allowedOrigins.includes(origin);
 }
 
 export async function requireCsrf(request: Request) {

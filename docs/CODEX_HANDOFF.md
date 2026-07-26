@@ -68,6 +68,17 @@ Máy mới cần tạo `.env.local` từ `.env.example`; không sao chép secret
 
 ## Nhật ký bàn giao
 
+### 2026-07-26 - Sửa đăng nhập sau reverse proxy trên VM
+
+- Sửa kiểm tra same-origin để chấp nhận origin public khai báo bằng `APP_ORIGIN`
+  và origin chuẩn từ `Forwarded`/`X-Forwarded-Proto` + `X-Forwarded-Host`; vẫn
+  từ chối origin thiếu, sai protocol hoặc chứa path/query.
+- Bổ sung cấu hình mẫu và `docs/vm-deployment.md` cho HTTPS termination qua
+  Nginx. Production `nic.thanhnt2k.app` cần đặt
+  `APP_ORIGIN=https://nic.thanhnt2k.app`, chuyển tiếp đúng header và restart app.
+- Bổ sung regression assertion trong auth security test. `npm.cmd run lint` và
+  `npm.cmd run test:unit` đạt (65 test).
+
 ### 2026-07-22 - Vá advisory libvips/sharp production dependency
 
 - `npm audit --omit=dev` phát hiện `sharp@0.34.5` qua Next/Miniflare chịu các advisory libvips; không dùng `npm audit fix --force` vì npm đề xuất hạ Next xuống 14.

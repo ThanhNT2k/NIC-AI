@@ -178,6 +178,10 @@ test("write routes require CSRF and distributed rate limits", async () => {
   assert.match(auth, /x-csrf-token/);
   assert.match(auth, /csrf_hash/);
   assert.match(auth, /ON CONFLICT\(bucket_key\)/);
+  assert.match(auth, /process\.env\.APP_ORIGIN/);
+  assert.match(auth, /x-forwarded-proto/);
+  assert.match(auth, /x-forwarded-host/);
+  assert.match(auth, /allowedOrigins\.includes\(origin\)/);
   assert.match(createDraft, /requireCsrf\(request\)/);
   assert.match(createDraft, /enforceRateLimit/);
   assert.match(revoke, /DELETE FROM sessions WHERE user_id = \?/);
