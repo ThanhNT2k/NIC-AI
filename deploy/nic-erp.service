@@ -1,0 +1,34 @@
+[Unit]
+Description=NIC Operations ERP
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=nic-erp
+Group=nic-erp
+WorkingDirectory=/opt/nic-erp/current
+Environment=NODE_ENV=production
+Environment=APP_ORIGIN=https://nic.thanhnt2k.app
+EnvironmentFile=/etc/nic-erp.env
+ExecStart=/usr/bin/node node_modules/vinext/dist/cli.js start
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=60
+TimeoutStopSec=30
+KillSignal=SIGTERM
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictRealtime=true
+SystemCallArchitectures=native
+ReadWritePaths=/opt/nic-erp
+
+[Install]
+WantedBy=multi-user.target

@@ -68,6 +68,31 @@ Máy mới cần tạo `.env.local` từ `.env.example`; không sao chép secret
 
 ## Nhật ký bàn giao
 
+### 2026-07-27 - Chuyển production sang Supabase/PostgreSQL và deploy VM
+
+- Thêm PostgreSQL runtime adapter có transaction batch, placeholder conversion
+  và camelCase alias compatibility; production dùng schema biệt lập `nic_app`.
+- Sinh và áp migration PostgreSQL từ 14 migration D1: 72 bảng cùng trigger bảo vệ
+  anti-overlap, immutable cost, QR replay, PO approval và receipt quantity.
+- Chuyển attachment production sang bucket Supabase Storage private
+  `nic-attachments`; upload/download/delete chỉ dùng service-role key server-side.
+- Thêm script migration, storage bootstrap, pooler detection và production smoke
+  test; fixture database/storage được cleanup tự động.
+- Deploy VM `157.245.58.32`: Node 22 + systemd `nic-erp`, Nginx HTTPS
+  `nic.thanhnt2k.app`, release versioned tại
+  `/opt/nic-erp/releases/20260727-postgres-patched`.
+- VM dùng Supabase transaction pooler IPv4 region `ap-southeast-2`; endpoint
+  direct IPv6 không route được từ VM.
+- Vá production dependency lên Next `16.2.12` và PostCSS `8.5.18`.
+- Kiểm tra: lint đạt; 65 unit/integration + rendered HTML đạt; production build
+  đạt; `npm audit --omit=dev` đạt 0 vulnerability cả local và VM; HTTPS smoke
+  đạt home 200, login 200, draft list 200, draft create 201, Secure cookie và
+  private Storage upload/download/delete; systemd active/enabled, journal không
+  có warning.
+- Bước tiếp theo: cấu hình malware scanner thật và cron secret/schedule, bật
+  backup/restore drill cho PostgreSQL/Storage, thay tài khoản demo bằng IdP/MFA
+  production trước khi mở cho người dùng thật.
+
 ### 2026-07-26 - Chạy nguyên bản Cloudflare build trên VM demo
 
 - Thêm `wrangler.vm.jsonc` để chạy `dist/server/index.js` cùng assets, D1 và R2

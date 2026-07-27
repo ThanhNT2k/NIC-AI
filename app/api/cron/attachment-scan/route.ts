@@ -1,12 +1,13 @@
 import { database } from "@/lib/d1-auth";
 import { scanAttachment } from "@/lib/malware-scanner";
+import { attachmentStorage } from "@/lib/attachment-storage";
 
 type ScanRow={id:string;requestId:string;uploadedBy:string;objectKey:string;contentType:string;sha256:string;scanAttempts:number};
 
 export async function POST(request:Request){
   const secret=process.env.ATTACHMENT_SCAN_CRON_SECRET;
   if(!secret||request.headers.get("authorization")!==`Bearer ${secret}`)return Response.json({error:"CRON_UNAUTHORIZED"},{status:401});
-  const {env}=await import("cloudflare:workers"),storage=(env as typeof env&{ATTACHMENTS?:R2Bucket}).ATTACHMENTS;
+  const storage=await attachmentStorage().catch(()=>null);
   if(!storage)return Response.json({error:"ATTACHMENT_STORAGE_UNAVAILABLE"},{status:503});
   const db=await database(),now=Math.floor(Date.now()/1000);
   const rows=(await db.prepare("SELECT id,request_id AS requestId,uploaded_by AS uploadedBy,object_key AS objectKey,content_type AS contentType,sha256,scan_attempts AS scanAttempts FROM request_attachments WHERE validation_status='quarantined' AND scan_attempts<5 ORDER BY created_at LIMIT 20").all<ScanRow>()).results;

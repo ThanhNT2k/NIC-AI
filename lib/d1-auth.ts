@@ -34,10 +34,13 @@ function constantTimeEqual(left: Uint8Array, right: Uint8Array) {
   return difference === 0;
 }
 
-export async function database() {
+export async function database(): Promise<import("@/lib/postgres-d1").ApplicationDatabase> {
+  const { getPostgresDatabase } = await import("@/lib/postgres-d1");
+  const postgres = getPostgresDatabase();
+  if (postgres) return postgres;
   const { env } = await import("cloudflare:workers");
   if (!env.DB) throw new Error("D1 binding DB chưa được cấu hình.");
-  return env.DB;
+  return env.DB as unknown as import("@/lib/postgres-d1").ApplicationDatabase;
 }
 
 export async function hashPassword(password: string) {
@@ -169,7 +172,7 @@ export async function requireCsrf(request: Request) {
 export async function enforceRateLimit(request: Request, scope: string, identity: string, limit: number, windowSeconds: number) {
   const ip = request.headers.get("cf-connecting-ip") ?? request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
   const bucketKey = await sha256(`${scope}:${ip}:${identity.toLowerCase()}`); const now = Math.floor(Date.now() / 1000); const db = await database();
-  const row = await db.prepare("INSERT INTO rate_limits (bucket_key, window_start, count, expires_at) VALUES (?, ?, 1, ?) ON CONFLICT(bucket_key) DO UPDATE SET count = CASE WHEN window_start <= ? THEN 1 ELSE count + 1 END, window_start = CASE WHEN window_start <= ? THEN ? ELSE window_start END, expires_at = ? RETURNING count").bind(bucketKey, now, now + windowSeconds * 2, now - windowSeconds, now - windowSeconds, now, now + windowSeconds * 2).first<{ count: number }>();
+  const row = await db.prepare("INSERT INTO rate_limits (bucket_key, window_start, count, expires_at) VALUES (?, ?, 1, ?) ON CONFLICT(bucket_key) DO UPDATE SET count = CASE WHEN rate_limits.window_start <= ? THEN 1 ELSE rate_limits.count + 1 END, window_start = CASE WHEN rate_limits.window_start <= ? THEN ? ELSE rate_limits.window_start END, expires_at = ? RETURNING count").bind(bucketKey, now, now + windowSeconds * 2, now - windowSeconds, now - windowSeconds, now, now + windowSeconds * 2).first<{ count: number }>();
   return (row?.count ?? limit + 1) <= limit;
 }
 import { capabilitiesFor } from "@/lib/access-control";

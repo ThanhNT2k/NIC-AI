@@ -1,19 +1,13 @@
 import { MAX_ATTACHMENT_BYTES, safeAttachmentName, validateAttachment } from "@/lib/attachment-policy";
 import { currentUser, database, enforceRateLimit, requireCsrf } from "@/lib/d1-auth";
 import { canCommentRequest, canReadRequest, type ScopedRequest } from "@/lib/request-scope";
+import { attachmentStorage } from "@/lib/attachment-storage";
 
 type AttachmentRow = { id:string;originalName:string;contentType:string;sizeBytes:number;sha256:string;validationStatus:string;uploadedBy:string;uploaderName:string;createdAt:number };
 
 async function requestItem(id: string) {
   const db = await database();
   return db.prepare("SELECT id,owner_id AS ownerId,organization,status,target_department AS targetDepartment FROM service_requests WHERE id=?").bind(id).first<ScopedRequest>();
-}
-
-async function bucket() {
-  const { env } = await import("cloudflare:workers");
-  const attachments = (env as typeof env & { ATTACHMENTS?: R2Bucket }).ATTACHMENTS;
-  if (!attachments) throw new Error("R2 binding ATTACHMENTS chưa được cấu hình.");
-  return attachments;
 }
 
 function hex(bytes: ArrayBuffer) {
@@ -52,7 +46,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   const objectKey = `requests/${id}/${attachmentId}`;
   const originalName = safeAttachmentName(file.name);
   const sha256 = hex(await crypto.subtle.digest("SHA-256", bytes));
-  const storage = await bucket();
+  const storage = await attachmentStorage();
   await storage.put(objectKey, bytes, { httpMetadata: { contentType: file.type }, customMetadata: { requestId: id, attachmentId, sha256 } });
   const db = await database();
   const now = Math.floor(Date.now() / 1000);

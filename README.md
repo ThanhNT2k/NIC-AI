@@ -185,7 +185,7 @@ See [identity and access control](docs/identity-access-control.md) and [role-bas
 flowchart LR
     B[Browser / React 19] --> V[Vinext / Next-compatible routes]
     V --> A[Application APIs]
-    A --> D[(Cloudflare D1)]
+    A --> D[(Supabase PostgreSQL)]
     A --> O[Gemini API]
     A --> P[Capability policy]
     P --> D
@@ -194,7 +194,7 @@ flowchart LR
 
 - **Frontend:** React 19, TypeScript, Vinext/Vite and Tailwind CSS 4.
 - **Backend:** Next-compatible API route handlers deployed as a Cloudflare Worker.
-- **Persistence:** Cloudflare D1/SQLite for the deployed MVP; Drizzle schema and SQL migrations.
+- **Persistence:** Supabase PostgreSQL schema `nic_app` for production; D1/SQLite remains available for local compatibility tests.
 - **AI:** Gemini API with `gemini-2.5-flash` and structured outputs; deterministic local fallback.
 - **Target architecture:** modular monolith, with UI → application/domain → persistence boundaries.
 
@@ -385,7 +385,9 @@ The app is packaged as a Cloudflare Worker-compatible Vinext build. Logical stor
 }
 ```
 
-Deployment packages include `dist/`, `.openai/hosting.json` and all SQL migrations. Production runtime secrets are managed by the hosting platform, not committed files.
+The private VM production runtime uses systemd, Nginx, Supabase PostgreSQL and a
+private Supabase Storage bucket. Runtime secrets live in `/etc/nic-erp.env` and
+are never committed.
 
 ---
 

@@ -16,12 +16,17 @@
     "db:generate": "drizzle-kit generate",
     "db:local:migrate": "wrangler d1 migrations apply site-creator-d1 --local --config wrangler.local.jsonc --persist-to .wrangler/state",
     "db:vm:migrate": "wrangler d1 migrations apply site-creator-d1 --local --config wrangler.vm.jsonc --persist-to .wrangler/state",
+    "db:postgres:generate": "node scripts/generate-postgres-migration.mjs",
+    "db:postgres:migrate": "node --env-file=.env scripts/migrate-postgres.mjs",
+    "storage:supabase:ensure": "node --env-file=.env scripts/ensure-supabase-storage.mjs",
+    "smoke:production": "node --env-file=.env scripts/smoke-production.mjs",
     "test:rls:staging": "node --env-file=.env scripts/test-supabase-rls.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.7",
     "drizzle-orm": "0.45.2",
-    "next": "16.2.6",
+    "next": "16.2.12",
+    "pg": "^8.16.3",
     "react": "19.2.6",
     "react-dom": "19.2.6",
     "zod": "^4.4.3"
@@ -30,6 +35,7 @@
     "@cloudflare/vite-plugin": "1.37.1",
     "@tailwindcss/postcss": "4.2.1",
     "@types/node": "22.19.19",
+    "@types/pg": "^8.15.6",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "6.0.2",
@@ -45,7 +51,7 @@
     "wrangler": "4.92.0"
   },
   "overrides": {
-    "postcss": "8.5.14",
+    "postcss": "8.5.18",
     "ws": "8.21.1",
     "sharp": "0.35.3"
   },
