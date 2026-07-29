@@ -5,7 +5,8 @@
   # NIC Service Hub — AI-Powered Facility & Visitor Services
 
   **Cổng dịch vụ ERP dành cho doanh nghiệp, khách và đội vận hành tại NIC: tiếp nhận yêu cầu cơ sở vật chất, đặt không gian, đăng ký sự kiện/khách/thẻ ra vào và hỗ trợ người dùng bằng NIC Copilot.**
-
+  
+  [![OpenSSF Scorecard](https://scorecard.dev)](https://scorecard.dev)
   ![Node.js](https://img.shields.io/badge/Node.js-22.13+-339933?logo=node.js&logoColor=white)
   ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)
   ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=111)
