@@ -68,6 +68,21 @@ Máy mới cần tạo `.env.local` từ `.env.example`; không sao chép secret
 
 ## Nhật ký bàn giao
 
+### 2026-07-30 - Vá dependency sau OpenSSF Scorecard
+
+- Nâng React/RSC lên `19.2.8`, Vite lên `8.1.5`, Cloudflare Vite plugin,
+  RSC/React plugin, Wrangler và ESLint config lên các bản vá tương thích mới.
+- Ghim transitive `esbuild`, `minimatch` và `brace-expansion` đã vá; không dùng
+  `npm audit fix --force` và không hạ Drizzle Kit xuống bản cũ.
+- `npm audit` toàn bộ dependency tree đạt 0 vulnerability; `npm run lint` đạt;
+  65 unit/integration test, production build và rendered-page test đều đạt.
+- Sáu Code Scanning alert còn lại gồm Vulnerabilities, Maintained, Code-Review,
+  Branch-Protection, Fuzzing và CII Best Practices. Bản vá này xử lý
+  Vulnerabilities; năm mục còn lại là tín hiệu tuổi repository/quy trình dự án
+  solo hoặc chương trình bên ngoài, không phải lỗi source.
+- Thay đổi đang ở nhánh `agent/resolve-scorecard-alerts`; còn cần commit, push,
+  merge PR và chạy lại Scorecard. GitHub CLI hiện vẫn báo token không hợp lệ.
+
 ### 2026-07-29 - OpenSSF Scorecard hardening và đối soát epic #14
 
 - Đối chiếu issue #6-#10 và epic #14 với migration `0008`, API P2, portal vận
