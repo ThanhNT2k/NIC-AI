@@ -68,6 +68,28 @@ Máy mới cần tạo `.env.local` từ `.env.example`; không sao chép secret
 
 ## Nhật ký bàn giao
 
+### 2026-07-29 - OpenSSF Scorecard hardening và đối soát epic #14
+
+- Đối chiếu issue #6-#10 và epic #14 với migration `0008`, API P2, portal vận
+  hành, policy/test P2 và tài liệu `P2_OPERATIONAL_PORTFOLIO.md`; phạm vi MVP
+  đã có bằng chứng trong code và test.
+- Pin toàn bộ GitHub Actions bằng full commit SHA, nâng Scorecard/CodeQL và
+  artifact action lên release đã xác minh; checkout tắt persist credential.
+- Thêm Dependabot cho npm và GitHub Actions, CodeQL SAST định kỳ/PR/push,
+  `CODEOWNERS` và `SECURITY.md` với kênh private disclosure.
+- Kiểm tra đầy đủ: lint đạt; 65 unit/integration test, production build và
+  rendered-page test đạt; `npm audit --omit=dev` đạt 0 vulnerability. Full
+  dev-tool audit còn advisory upstream chưa có safe fix cho Vinext/Vite,
+  Wrangler/Miniflare, ESLint và Drizzle toolchain; không dùng force fix.
+- Chủ sở hữu đã chọn MIT License; thêm `LICENSE` và làm rõ MIT không cấp quyền
+  sử dụng nhãn hiệu/logo NIC hoặc tài sản bên thứ ba.
+- Issue #6-#10 và epic #14 đã ở trạng thái Closed trên GitHub; epic #14 được
+  xác nhận đóng sau khi full test đạt.
+- Ruleset `Protect main` đã được tạo và Active cho `main`: yêu cầu PR + 1
+  approval + check `audit-and-test`, chặn xóa và force-push.
+- Còn cần publish thay đổi, merge PR và chạy lại Scorecard để GitHub đánh giá
+  lại các cảnh báo theo cấu hình mới.
+
 ### 2026-07-27 - Chuyển production sang Supabase/PostgreSQL và deploy VM
 
 - Thêm PostgreSQL runtime adapter có transaction batch, placeholder conversion
