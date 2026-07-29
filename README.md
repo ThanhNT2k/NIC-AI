@@ -394,6 +394,9 @@ are never committed.
 
 ## 9. Security
 
+- Vulnerability reports follow the private disclosure process in [SECURITY.md](SECURITY.md).
+- GitHub Actions dependencies are pinned to immutable commit SHAs and monitored by Dependabot.
+- CI includes dependency audit, lint, tests and CodeQL analysis for JavaScript/TypeScript.
 - PBKDF2-SHA256 password hashing with salt and 210,000 iterations.
 - Only hashed session tokens are stored.
 - HttpOnly session cookie and SameSite policy.
@@ -496,4 +499,6 @@ NIC-AI/
 
 ## License & Usage
 
-No open-source license has been declared in this repository. Treat the source, NIC branding and included assets as project material for authorized evaluation and development only until the project owner provides an explicit license.
+Source code is available under the [MIT License](LICENSE). NIC names, logos,
+branding and third-party assets remain subject to their respective trademark,
+copyright and usage policies; the MIT License does not grant trademark rights.
