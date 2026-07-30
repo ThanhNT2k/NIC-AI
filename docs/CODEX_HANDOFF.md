@@ -68,6 +68,18 @@ Máy mới cần tạo `.env.local` từ `.env.example`; không sao chép secret
 
 ## Nhật ký bàn giao
 
+### 2026-07-30 - Tự động deploy production theo commit GitHub
+
+- Thêm workflow `deploy-production.yml` chạy khi push vào `main` hoặc kích hoạt
+  thủ công; workflow chuyển chính xác `github.sha` tới VM qua SSH đã ghim host key.
+- Thêm `deploy/vm-deploy.sh`: build release bất biến, chuyển symlink `current`,
+  restart systemd, health check nội bộ/public và tự rollback ứng dụng nếu lỗi.
+- Mỗi thư mục release trên VM được đặt tên bằng full 40-character commit SHA;
+  chạy lại cùng SHA sẽ tái sử dụng đúng release đã được xác minh.
+- Database migration không tự chạy trong workflow để tránh thay đổi production
+  ngoài kiểm soát; migration tiếp tục là bước vận hành được phê duyệt riêng.
+- SSH deploy key trên VM dùng forced command riêng cho NIC và không cấp shell tùy ý.
+
 ### 2026-07-30 - Vá dependency sau OpenSSF Scorecard
 
 - Nâng React/RSC lên `19.2.8`, Vite lên `8.1.5`, Cloudflare Vite plugin,
